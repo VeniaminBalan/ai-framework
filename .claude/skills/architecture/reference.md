@@ -1,15 +1,16 @@
-# Frontend Architecture & Project Structure
+# Architecture Reference
 
-## Overview
-This skill defines the project architecture and folder structure for the frontend application.
+Detailed rules and conventions for React/TypeScript frontend architecture.
 
 ## Technology Stack
+
 - **Build Tool**: Vite (latest stable version)
 - **Framework**: React (latest stable version)
 - **Language**: TypeScript (mandatory for all new code)
 - **Target**: Modern browsers
 
 ## Folder Structure
+
 Follow a **feature-based folder structure**:
 
 ```
@@ -26,9 +27,9 @@ src/
 └── constants/          # Application constants and route definitions
 ```
 
-## Component Design Principles
+## Separation of Concerns
 
-### Separation of Concerns
+### Component Responsibilities
 - **UI Components**: Focus on rendering JSX with minimal logic
 - **Custom Hooks**: Handle state management, side effects, and complex logic
 - **Services**: Manage API calls and external communication
@@ -46,31 +47,21 @@ src/
 - Keep deeply nested folder structures shallow (max 3-4 levels)
 - Use index files sparingly (only for public API exports)
 
-## Code Organization Pattern
+## TypeScript Configuration
 
-```typescript
-// Good: Single responsibility, clear naming
-export const UserProfile = ({ userId }: { userId: string }) => {
-  const { data: user, isLoading } = useUser(userId);
-  const { t } = useTranslation();
-  
-  if (isLoading) return <LoadingSpinner />;
-  if (!user) return <NotFound />;
-  
-  return (
-    <div>
-      <UserAvatar src={user.avatar} />
-      <UserInfo user={user} />
-      <UserActions userId={userId} />
-    </div>
-  );
-};
+- Use strict mode: `"strict": true` in tsconfig.json
+- Avoid `any` type - use `unknown` or proper typing
+- Use type inference when obvious, explicit types when needed
+- Define interfaces for component props
+- Use enums or const assertions for constants
 
-// Bad: Too much responsibility, hard to maintain
-export const UserProfile = ({ userId }: { userId: string }) => {
-  // 300 lines of mixed logic and JSX
-};
-```
+## Dependencies
+
+- Keep dependencies minimal and justified
+- Regularly update dependencies for security
+- Review bundle size impact of new dependencies
+- Prefer well-maintained, popular libraries
+- Avoid redundant dependencies
 
 ## When Creating New Features
 
@@ -83,25 +74,3 @@ export const UserProfile = ({ userId }: { userId: string }) => {
    - Types in the types folder
 4. **Keep it modular**: Each module should have a single, well-defined purpose
 5. **Document complex logic**: Add JSDoc comments for non-obvious functionality
-
-## TypeScript Configuration
-- Use strict mode: `"strict": true` in tsconfig.json
-- Avoid `any` type - use `unknown` or proper typing
-- Use type inference when obvious, explicit types when needed
-- Define interfaces for component props
-- Use enums or const assertions for constants
-
-## Dependencies
-- Keep dependencies minimal and justified
-- Regularly update dependencies for security
-- Review bundle size impact of new dependencies
-- Prefer well-maintained, popular libraries
-- Avoid redundant dependencies
-
-## Checklist for New Components
-- [ ] Component is in the correct folder (feature-based)
-- [ ] Logic is extracted to custom hooks if complex
-- [ ] Component file is under 200 lines
-- [ ] Props are properly typed with TypeScript
-- [ ] Component follows single responsibility principle
-- [ ] Related components are grouped together

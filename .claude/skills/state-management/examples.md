@@ -1,24 +1,6 @@
-# Frontend State Management
+# State Management Examples
 
-## Overview
-This skill covers state management patterns and best practices for React applications.
-
-## State Types
-
-### Local State
-- Use `useState` for simple component-local state
-- Use `useReducer` for complex state logic with multiple sub-values
-- Keep state as local as possible
-- Lift state up only when needed by multiple components
-
-### Global State
-- Use **React Context** combined with custom hooks for shared/global state
-- Avoid prop drilling beyond 2-3 levels
-- Create context providers with clear, focused responsibilities
-
-## Context Pattern
-
-### Creating a Context with Custom Hook
+## Context with Custom Hook
 
 ```typescript
 // contexts/AuthContext.tsx
@@ -37,14 +19,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
   const login = async (credentials: Credentials) => {
-    // Login logic
     const user = await authService.login(credentials);
     setUser(user);
   };
 
-  const logout = () => {
-    setUser(null);
-  };
+  const logout = () => setUser(null);
 
   const value = {
     user,
@@ -64,21 +43,15 @@ export const useAuth = () => {
   }
   return context;
 };
-```
 
-### Using the Context
-
-```typescript
-// In a component
-import { useAuth } from '@/hooks/useAuth';
-
+// Usage in component
 const MyComponent = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  
+
   if (!isAuthenticated) {
     return <LoginPrompt />;
   }
-  
+
   return (
     <div>
       <p>Welcome, {user.name}</p>
@@ -87,24 +60,6 @@ const MyComponent = () => {
   );
 };
 ```
-
-## State Management Rules
-
-### When to Use Local State
-- State is only used within a single component
-- State doesn't need to persist across unmounts
-- State is simple and doesn't require complex updates
-
-### When to Use Context
-- State is needed by multiple components at different nesting levels
-- You want to avoid prop drilling
-- State represents application-wide concerns (auth, theme, language)
-
-### When to Use useReducer
-- State has complex update logic
-- State has multiple sub-values
-- Next state depends on the previous state
-- You want to centralize state update logic
 
 ## useReducer Pattern
 
@@ -150,7 +105,6 @@ function reducer(state: State, action: Action): State {
 // Usage in component
 const [state, dispatch] = useReducer(reducer, initialState);
 
-// Dispatching actions
 dispatch({ type: 'FETCH_START' });
 dispatch({ type: 'FETCH_SUCCESS', payload: data });
 dispatch({ type: 'UPDATE_FILTERS', payload: { search: 'query' } });
@@ -188,19 +142,8 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
 };
 ```
 
-## State Management Best Practices
+## Derived State
 
-1. **Keep state minimal**: Only store what's necessary
-2. **Derive computed values**: Don't store values that can be calculated
-3. **Avoid state duplication**: Single source of truth for each piece of state
-4. **Colocate state**: Keep state as close to where it's used as possible
-5. **Use proper TypeScript types**: Strongly type all state and actions
-6. **Handle loading and error states**: Always account for async operations
-7. **Provide default values**: Ensure contexts have sensible defaults
-
-## Common Patterns
-
-### Derived State
 ```typescript
 // Good: Derive from existing state
 const { data: users } = useUsers();
@@ -208,19 +151,21 @@ const activeUsers = users?.filter(u => u.isActive) || [];
 
 // Bad: Store derived state separately
 const [users, setUsers] = useState([]);
-const [activeUsers, setActiveUsers] = useState([]);
+const [activeUsers, setActiveUsers] = useState([]); // Don't do this
 ```
 
-### State Updates with Previous State
+## State Updates with Previous State
+
 ```typescript
 // Good: Use functional update
 setCount(prev => prev + 1);
 
-// Bad: Use current state value
+// Bad: Use current state value (can cause stale closure issues)
 setCount(count + 1);
 ```
 
-### Complex State Updates
+## Complex State Updates
+
 ```typescript
 // Good: Use useReducer for complex logic
 const [state, dispatch] = useReducer(reducer, initialState);
@@ -233,12 +178,88 @@ const [error, setError] = useState(null);
 // Complex update logic scattered throughout component
 ```
 
-## Checklist for State Management
-- [ ] State is at the appropriate level (local vs global)
-- [ ] No unnecessary state duplication
-- [ ] Derived values are computed, not stored
-- [ ] Context providers are properly typed
-- [ ] Custom hooks are used to consume contexts
-- [ ] Error boundaries protect context providers
-- [ ] State updates use functional form when depending on previous state
-- [ ] Complex state logic uses useReducer
+## Form State Management
+
+```typescript
+// Local state for form data
+const [formData, setFormData] = useState<FormType>(initialFormData);
+
+// Update handler with functional update
+const handleChange = useCallback((field: keyof FormType, value: string | number) => {
+  setFormData(prev => ({ ...prev, [field]: value }));
+}, []);
+
+// Reset function
+const resetForm = useCallback((data?: FormType) => {
+  setFormData(data ?? initialFormData);
+}, []);
+```
+
+## Loading and Error States
+
+```typescript
+interface AsyncState<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+}
+
+const [state, setState] = useState<AsyncState<User[]>>({
+  data: null,
+  loading: false,
+  error: null,
+});
+
+// Or use React Query which handles this automatically
+const { data, isLoading, error } = useQuery({
+  queryKey: ['users'],
+  queryFn: fetchUsers,
+});
+```
+
+## Theme Context Example
+
+```typescript
+type Theme = 'light' | 'dark' | 'system';
+
+interface ThemeContextType {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  resolvedTheme: 'light' | 'dark';
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const [theme, setTheme] = useState<Theme>(() => {
+    return (localStorage.getItem('theme') as Theme) || 'system';
+  });
+
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+    const effectiveTheme = theme === 'system' ? systemTheme : theme;
+
+    setResolvedTheme(effectiveTheme);
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within ThemeProvider');
+  }
+  return context;
+};
+```

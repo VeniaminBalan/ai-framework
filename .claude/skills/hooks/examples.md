@@ -1,9 +1,6 @@
-# Frontend Custom Hooks
+# Custom Hooks Examples
 
-## Overview
-Custom React hooks for reusable logic extraction. Always prefix with `use`.
-
-## Required: useDebounce
+## useDebounce
 
 ```typescript
 // hooks/useDebounce.ts
@@ -30,13 +27,11 @@ const [searchTerm, setSearchTerm] = useState('');
 const debouncedSearch = useDebounce(searchTerm, 500);
 
 useEffect(() => {
-  fetchResults(debouncedSearch); // Only after 500ms of no typing
+  fetchResults(debouncedSearch);
 }, [debouncedSearch]);
 ```
 
-## Common Custom Hooks
-
-### useLocalStorage
+## useLocalStorage
 
 ```typescript
 // hooks/useLocalStorage.ts
@@ -66,7 +61,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
 }
 ```
 
-### useMediaQuery
+## useMediaQuery
 
 ```typescript
 // hooks/useMediaQuery.ts
@@ -89,7 +84,7 @@ export function useMediaQuery(query: string): boolean {
 const isMobile = useMediaQuery('(max-width: 768px)');
 ```
 
-### usePagination
+## usePagination
 
 ```typescript
 // hooks/usePagination.ts
@@ -111,7 +106,7 @@ export function usePagination({ totalItems, itemsPerPage, initialPage = 1 }: Use
 
   const paginationRange = useMemo(() => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    
+
     const range: (number | string)[] = [];
     if (currentPage <= 3) {
       for (let i = 1; i <= 5; i++) range.push(i);
@@ -138,7 +133,7 @@ export function usePagination({ totalItems, itemsPerPage, initialPage = 1 }: Use
 }
 ```
 
-### useClickOutside
+## useClickOutside
 
 ```typescript
 // hooks/useClickOutside.ts
@@ -169,7 +164,7 @@ const dropdownRef = useRef<HTMLDivElement>(null);
 useClickOutside(dropdownRef, () => setIsOpen(false));
 ```
 
-### useToggle
+## useToggle
 
 ```typescript
 // hooks/useToggle.ts
@@ -185,7 +180,7 @@ export function useToggle(initialValue = false): [boolean, () => void, (value: b
 const [isOpen, toggleOpen, setIsOpen] = useToggle();
 ```
 
-### useAsync
+## useAsync
 
 ```typescript
 // hooks/useAsync.ts
@@ -223,7 +218,7 @@ export function useAsync<T>(
 }
 ```
 
-### useKeyPress
+## useKeyPress
 
 ```typescript
 // hooks/useKeyPress.ts
@@ -252,97 +247,113 @@ const escapePressed = useKeyPress('Escape');
 useEffect(() => { if (escapePressed) closeModal(); }, [escapePressed]);
 ```
 
-## Hook Guidelines
-
-### Do's ✅
-- Name with `use` prefix
-- Make reusable and generic
-- Document with JSDoc
-- Handle cleanup in useEffect
-- Use TypeScript
-- Single responsibility
-- Return objects for 3+ values, tuples for 2
-
-### Don'ts ❌
-- Never include JSX/rendering
-- Don't call conditionally
-- Don't call in loops
-- Don't call in regular functions
-- Avoid component coupling
-
-## Hook Structure Template
+## useFormState
 
 ```typescript
-// hooks/useMyHook.ts
-import { useState, useEffect, useCallback } from 'react';
+// hooks/useFormState.ts
+import { useState, useCallback } from "react";
 
-/**
- * Description
- * @param param1 - Description
- * @returns Description
- */
-export function useMyHook(param1: Type) {
-  const [state, setState] = useState(initialValue);
+interface UseFormStateOptions<T> {
+  initialData: T;
+  onSubmit: (data: T) => Promise<void>;
+  validate?: (data: T) => Record<string, string>;
+}
 
-  useEffect(() => {
-    // Effect logic
-    return () => {
-      // Cleanup
-    };
-  }, [/* dependencies */]);
+export function useFormState<T extends Record<string, unknown>>({
+  initialData,
+  onSubmit,
+  validate,
+}: UseFormStateOptions<T>) {
+  const [formData, setFormData] = useState<T>(initialData);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const callback = useCallback(() => {
-    // Logic
-  }, [/* dependencies */]);
+  const handleChange = useCallback(<K extends keyof T>(field: K, value: T[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      if (prev[field as string]) {
+        const newErrors = { ...prev };
+        delete newErrors[field as string];
+        return newErrors;
+      }
+      return prev;
+    });
+  }, []);
 
-  return { state, callback };
+  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    if (validate) {
+      const validationErrors = validate(formData);
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      await onSubmit(formData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [formData, validate, onSubmit]);
+
+  const reset = useCallback((newData?: T) => {
+    setFormData(newData ?? initialData);
+    setErrors({});
+    setError(null);
+  }, [initialData]);
+
+  return {
+    formData,
+    errors,
+    error,
+    isSubmitting,
+    handleChange,
+    handleSubmit,
+    reset,
+    setFormData,
+    setErrors,
+    setError,
+  };
 }
 ```
 
-## Common Use Cases
-
-1. Form handling logic
-2. Data fetching (prefer React Query)
-3. Event listeners (resize, scroll, keyboard)
-4. Local storage sync
-5. Window/document interactions
-6. Authentication state
-7. Pagination logic
-8. Debouncing/throttling
-9. Modal/dropdown state
-10. Animation states
-
-## Testing
+## useModal
 
 ```typescript
-// hooks/__tests__/useDebounce.test.ts
-import { renderHook, waitFor } from '@testing-library/react';
-import { useDebounce } from '../useDebounce';
+// hooks/useModal.ts
+import { useState, useCallback } from "react";
 
-describe('useDebounce', () => {
-  it('should debounce value changes', async () => {
-    const { result, rerender } = renderHook(
-      ({ value, delay }) => useDebounce(value, delay),
-      { initialProps: { value: 'initial', delay: 500 } }
-    );
+export function useModal<T = undefined>() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [data, setData] = useState<T | undefined>(undefined);
 
-    expect(result.current).toBe('initial');
-    rerender({ value: 'updated', delay: 500 });
-    expect(result.current).toBe('initial');
+  const open = useCallback((modalData?: T) => {
+    setData(modalData);
+    setIsOpen(true);
+  }, []);
 
-    await waitFor(() => expect(result.current).toBe('updated'), { timeout: 600 });
-  });
-});
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setData(undefined);
+  }, []);
+
+  return { isOpen, data, open, close };
+}
+
+// Usage
+const createModal = useModal<void>();
+const editModal = useModal<EntityType>();
+
+<button onClick={() => createModal.open()}>Create</button>
+<button onClick={() => editModal.open(item)}>Edit</button>
+
+<CreateModal isOpen={createModal.isOpen} onClose={createModal.close} />
+<EditModal isOpen={editModal.isOpen} onClose={editModal.close} data={editModal.data} />
 ```
-
-## Checklist
-- [ ] Hook name starts with `use`
-- [ ] Reusable and generic
-- [ ] No JSX or rendering
-- [ ] Proper TypeScript typing
-- [ ] JSDoc comments
-- [ ] Cleanup functions
-- [ ] Correct dependencies
-- [ ] Appropriate return structure
-- [ ] Single responsibility
-- [ ] Tested
