@@ -1,35 +1,6 @@
----
-name: services
-description: Service layer specialist for business logic implementation. Use when implementing business rules, orchestrating operations, or managing domain logic.
----
+# Services Examples
 
-When invoked, follow these steps:
-
-1. **Explore First**: Search for existing services to understand naming conventions, base classes, and patterns already in use
-2. **Check Dependencies**: Verify that required repositories, validators, and DTOs exist. Note any missing dependencies
-3. **Implement**: Create or modify the service following established patterns and the rules below
-4. **Validate**: Run through the quality checklist before completing
-5. **Report**: Summarize business logic implemented, transactions applied, exceptions used, and any dependencies needed
-
-## Your Responsibility
-
-Services contain ALL business logic. They orchestrate operations between repositories, enforce business rules, and coordinate transactions.
-
-## Core Principles
-
-### Service Design Rules
-
-- All business logic must live in services
-- Never place business logic inside controllers
-- Use FluentValidation for complex validation logic
-- Register services as `Scoped`
-- Services must be:
-  - Testable
-  - Stateless (except for scoped dependencies)
-  - Implement interfaces for dependency injection
-  - One service per domain aggregate
-
-### Service Structure
+## Service Interface
 
 ```csharp
 public interface IUserService
@@ -40,7 +11,11 @@ public interface IUserService
     Task UpdateUserAsync(int id, UpdateUserDto dto);
     Task DeleteUserAsync(int id);
 }
+```
 
+## Service Implementation
+
+```csharp
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
@@ -69,7 +44,7 @@ public class UserService : IUserService
     public async Task<UserDto> GetUserByIdAsync(int id)
     {
         var user = await _userRepository.GetByIdAsync(id);
-        
+
         if (user == null)
         {
             _logger.LogWarning("User with ID {UserId} not found", id);
@@ -86,7 +61,7 @@ public class UserService : IUserService
 
     public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
     {
-        // Validate with FluentValidation (if not auto-validated by controller)
+        // Validate with FluentValidation
         var validationResult = await _createValidator.ValidateAsync(dto);
         if (!validationResult.IsValid)
         {
@@ -106,7 +81,7 @@ public class UserService : IUserService
     public async Task UpdateUserAsync(int id, UpdateUserDto dto)
     {
         var user = await _userRepository.GetByIdAsync(id);
-        
+
         if (user == null)
         {
             throw new NotFoundException($"User with ID {id} not found");
@@ -118,7 +93,7 @@ public class UserService : IUserService
             throw new ForbiddenException("Cannot update another user's profile");
         }
 
-        // FluentValidation handles complex validation (including unique email check)
+        // FluentValidation handles complex validation
         var validationResult = await _updateValidator.ValidateAsync(dto);
         if (!validationResult.IsValid)
         {
@@ -135,7 +110,7 @@ public class UserService : IUserService
     public async Task DeleteUserAsync(int id)
     {
         var user = await _userRepository.GetByIdAsync(id);
-        
+
         if (user == null)
         {
             throw new NotFoundException($"User with ID {id} not found");
@@ -155,9 +130,7 @@ public class UserService : IUserService
 }
 ```
 
-## Business Logic Patterns
-
-### Using FluentValidation in Services
+## Using FluentValidation in Services
 
 ```csharp
 public class OvertimeService : IOvertimeService
@@ -178,7 +151,7 @@ public class OvertimeService : IOvertimeService
 
     public async Task<OvertimeRequestDto> CreateOvertimeRequestAsync(CreateOvertimeRequestDto dto)
     {
-        // Validation handled by FluentValidation (hours, dates, project access, etc.)
+        // Validation handled by FluentValidation
         var validationResult = await _validator.ValidateAsync(dto);
         if (!validationResult.IsValid)
         {
@@ -188,7 +161,7 @@ public class OvertimeService : IOvertimeService
         // Business logic: Set initial status
         var request = dto.ToEntity();
         request.Status = OvertimeStatus.Pending;
-        
+
         await _repository.AddAsync(request);
         await _unitOfWork.SaveChangesAsync();
 
@@ -197,25 +170,13 @@ public class OvertimeService : IOvertimeService
 }
 ```
 
-### When to Use Manual Validation vs FluentValidation
-
-**Use FluentValidation for:**
-- Property-level validation (required, length, range)
-- Format validation (email, regex patterns)
-- Cross-property validation
-- Async validation (database checks for uniqueness, existence)
-- Complex validation rules
-
-**Use service-level checks for:**
-- Authorization checks (access control)
-- Business state validation (e.g., can't approve already-approved request)
-- Domain-specific business rules that depend on current state
+## Service-Level Business Rule Checks
 
 ```csharp
 public async Task ApproveOvertimeRequestAsync(int requestId, ApprovalDto dto)
 {
     var request = await _repository.GetByIdAsync(requestId);
-    
+
     if (request == null)
         throw new NotFoundException($"Request {requestId} not found");
 
@@ -229,22 +190,22 @@ public async Task ApproveOvertimeRequestAsync(int requestId, ApprovalDto dto)
 
     // Update state
     request.Status = OvertimeStatus.Approved;
-    
+
     await _unitOfWork.SaveChangesAsync();
 }
 ```
 
-### Transaction Management
+## Transaction Management
 
 ```csharp
 public async Task ApproveOvertimeRequestAsync(int requestId, ApprovalDto dto)
 {
     using var transaction = await _unitOfWork.BeginTransactionAsync();
-    
+
     try
     {
         var request = await _overtimeRepository.GetByIdAsync(requestId);
-        
+
         if (request == null)
         {
             throw new NotFoundException($"Request {requestId} not found");
@@ -270,8 +231,8 @@ public async Task ApproveOvertimeRequestAsync(int requestId, ApprovalDto dto)
         await transaction.CommitAsync();
 
         _logger.LogInformation(
-            "Overtime request {RequestId} approved by {ApproverId}", 
-            requestId, 
+            "Overtime request {RequestId} approved by {ApproverId}",
+            requestId,
             _userContext.UserId);
     }
     catch
@@ -282,7 +243,7 @@ public async Task ApproveOvertimeRequestAsync(int requestId, ApprovalDto dto)
 }
 ```
 
-### Complex Orchestration
+## Complex Orchestration
 
 ```csharp
 public async Task<ReportDto> GenerateMonthlyReportAsync(int year, int month)
@@ -314,85 +275,14 @@ public async Task<ReportDto> GenerateMonthlyReportAsync(int year, int month)
 }
 ```
 
-## Exception Handling
-
-### Custom Exceptions
-
-```csharp
-public class NotFoundException : Exception
-{
-    public NotFoundException(string message) : base(message) { }
-}
-
-public class BusinessException : Exception
-{
-    public BusinessException(string message) : base(message) { }
-}
-
-public class ForbiddenException : Exception
-{
-    public ForbiddenException(string message) : base(message) { }
-}
-```
-
-### Service Exception Usage
-
-```csharp
-// Use specific exceptions that middleware can handle
-public async Task<UserDto> GetUserByIdAsync(int id)
-{
-    var user = await _userRepository.GetByIdAsync(id);
-    
-    if (user == null)
-    {
-        throw new NotFoundException($"User with ID {id} not found");
-    }
-
-    return user.ToDto();
-}
-
-// Business rule violations
-public async Task CreateAsync(CreateDto dto)
-{
-    if (await _repository.ExistsAsync(dto.Email))
-    {
-        throw new BusinessException("Email already exists");
-    }
-    // ...
-}
-
-// Authorization violations
-public async Task DeleteAsync(int id)
-{
-    if (!_userContext.IsAdmin)
-    {
-        throw new ForbiddenException("Only admins can delete users");
-    }
-    // ...
-}
-```
-
-## Dependency Injection
-
-### Service Registration
-
-```csharp
-// Program.cs
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IOvertimeService, OvertimeService>();
-builder.Services.AddScoped<IProjectService, ProjectService>();
-```
-
-## Logging
-
-### Structured Logging
+## Structured Logging
 
 ```csharp
 public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
 {
     _logger.LogInformation(
-        "Creating user with email {Email} by {CreatorId}", 
-        dto.Email, 
+        "Creating user with email {Email} by {CreatorId}",
+        dto.Email,
         _userContext.UserId);
 
     try
@@ -407,37 +297,18 @@ public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
     catch (Exception ex)
     {
         _logger.LogError(
-            ex, 
-            "Failed to create user with email {Email}", 
+            ex,
+            "Failed to create user with email {Email}",
             dto.Email);
         throw;
     }
 }
 ```
 
-## Quality Checklist
-
-Before submitting service code:
-
-- [ ] Service implements an interface
-- [ ] All business logic is in the service
-- [ ] No business logic in controllers or repositories
-- [ ] FluentValidation used for complex validation
-- [ ] Validators injected via dependency injection
-- [ ] Service-level checks for authorization and state validation
-- [ ] Proper exception handling with custom exceptions
-- [ ] Transactions used where needed
-- [ ] Logging for important operations
-- [ ] XML documentation on public methods
-- [ ] UserContext used for current user info
-- [ ] Unit of Work used for saving changes
-- [ ] DTOs used for input/output, not entities
-- [ ] All methods are async
-- [ ] Services are stateless
-
 ## Common Mistakes to Avoid
 
-❌ **Manual validation instead of FluentValidation**
+### ❌ Wrong: Manual validation instead of FluentValidation
+
 ```csharp
 // Wrong - manual validation for complex rules
 public async Task CreateAsync(CreateDto dto)
@@ -452,7 +323,8 @@ public async Task CreateAsync(CreateDto dto)
 }
 ```
 
-✅ **Use FluentValidation for complex validation**
+### ✅ Correct: Use FluentValidation
+
 ```csharp
 // Correct - FluentValidation handles all validation
 public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
@@ -460,7 +332,7 @@ public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
     var validationResult = await _validator.ValidateAsync(dto);
     if (!validationResult.IsValid)
         throw new ValidationException(validationResult.Errors);
-        
+
     var user = dto.ToEntity();
     await _repository.AddAsync(user);
     await _unitOfWork.SaveChangesAsync();
@@ -468,7 +340,8 @@ public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
 }
 ```
 
-❌ **Business logic in repository**
+### ❌ Wrong: Business logic in repository
+
 ```csharp
 // Wrong - validation in repository
 public async Task AddAsync(User user)
@@ -479,7 +352,8 @@ public async Task AddAsync(User user)
 }
 ```
 
-❌ **Stateful service**
+### ❌ Wrong: Stateful service
+
 ```csharp
 // Wrong - storing state
 public class UserService
@@ -488,7 +362,8 @@ public class UserService
 }
 ```
 
-✅ **Stateless service**
+### ✅ Correct: Stateless service
+
 ```csharp
 // Correct - use scoped dependencies
 public class UserService
@@ -496,9 +371,3 @@ public class UserService
     private readonly IUserContext _userContext; // This is scoped per request
 }
 ```
-
-## Files You Own
-- `**/Services/**/*.cs` (except interfaces in separate concern)
-
-## When Done
-Report: Business logic implemented, transactions applied, exceptions used, logging added.

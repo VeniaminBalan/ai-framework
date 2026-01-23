@@ -1,45 +1,6 @@
----
-name: dto-mapping
-description: DTO and mapping specialist. Use when creating DTOs, implementing manual mappings, or working with data transfer patterns.
----
+# DTO Mapping Examples
 
-When invoked, follow these steps:
-
-1. **Explore First**: Search for existing DTOs and mapping extensions to understand naming conventions and patterns
-2. **Check Dependencies**: Verify the domain entities exist and understand their structure
-3. **Implement**: Create DTOs and mapping extensions following established patterns and the rules below
-4. **Validate**: Ensure all required properties are mapped and DTOs are properly separated by operation
-5. **Report**: Summarize DTOs created, mapping extensions added, and any entity changes needed
-
-## Your Responsibility
-
-Manage all Data Transfer Objects (DTOs) and their manual mapping logic. Ensure clean separation between domain entities and API contracts.
-
-## Core Principles
-
-### DTO Rules
-
-- **Never expose domain entities through APIs**
-- DTOs define the API contract
-- DTOs should be immutable where possible
-- Use separate DTOs for different operations (Create, Update, Response)
-- Keep DTOs flat and simple
-
-### Manual Mapping Only
-
-❌ **FORBIDDEN: Automatic Mapping Libraries**
-- AutoMapper
-- Mapster
-- Any reflection-based mapper
-
-✅ **REQUIRED: Manual Mapping Patterns**
-- Explicit EF Core projection with `.Select()` for collection queries
-- Extension methods for single entity mapping
-- Clear, debuggable, performant
-
-## DTO Patterns
-
-### Response DTOs
+## Response DTOs
 
 ```csharp
 // Response DTO - What API returns
@@ -61,7 +22,7 @@ public class UserDetailDto : UserDto
 }
 ```
 
-### Request DTOs
+## Request DTOs
 
 ```csharp
 // Create DTO - For POST requests
@@ -94,7 +55,7 @@ public class UpdateUserDto
 }
 ```
 
-### Nested DTOs
+## Nested DTOs
 
 ```csharp
 public class OvertimeRequestDto
@@ -103,7 +64,7 @@ public class OvertimeRequestDto
     public DateTime Date { get; set; }
     public decimal Hours { get; set; }
     public string Status { get; set; }
-    
+
     // Nested DTOs
     public UserSummaryDto User { get; set; }
     public ProjectSummaryDto Project { get; set; }
@@ -124,17 +85,7 @@ public class ProjectSummaryDto
 }
 ```
 
-## Manual Mapping Implementation
-
-### Extension Methods (For Single Entities)
-
-**Use extension methods for:**
-- Single entity operations (create, update, get by ID)
-- Mapping request DTOs to entities
-- Updating existing entities from DTOs
-
-**Do NOT use extension methods for:**
-- Collection queries from database (use EF Core projection instead)
+## Mapping Extension Methods
 
 ```csharp
 // File: Mappings/UserMappingExtensions.cs
@@ -203,12 +154,7 @@ public static class UserMappingExtensions
 }
 ```
 
-### EF Core Projection (For Collections)
-
-**Use `.Select()` projection for:**
-- All collection queries from database
-- Paginated results
-- List operations
+## EF Core Projection for Collections
 
 ```csharp
 // ✅ CORRECT - Use projection for collections
@@ -235,98 +181,7 @@ public async Task<List<UserDto>> GetAllUsersAsync()
 }
 ```
 
-## Mapping Rules
-
-### ✅ Allowed in Mappings
-
-- Direct property copying
-- Null checks
-- Simple type conversions (int to string, enum to string)
-- Formatting (dates, numbers)
-- Null coalescing (`??`)
-- Collection projections (`.Select()`, `.ToList()`)
-
-```csharp
-public static UserDto ToDto(this User entity)
-{
-    return new UserDto
-    {
-        Id = entity.Id,
-        Name = entity.Name ?? "Unknown", // Simple null handling
-        Status = entity.Status.ToString(), // Enum to string
-        CreatedAt = entity.CreatedAt,
-        Age = DateTime.UtcNow.Year - entity.BirthDate.Year // Simple calculation
-    };
-}
-```
-
-### ❌ Forbidden in Mappings
-
-- Business logic
-- Validation rules
-- Conditional business rules
-- Database queries
-- Service calls
-- Complex calculations related to domain
-
-```csharp
-// ❌ WRONG - Business logic in mapping
-public static UserDto ToDto(this User entity)
-{
-    return new UserDto
-    {
-        Id = entity.Id,
-        Name = entity.Name,
-        // ❌ Business rule - should be in service
-        CanRequestOvertime = entity.ContractType == "FullTime" && 
-                           entity.YearsOfService > 1,
-        // ❌ Validation - should be in service or validator
-        IsValid = !string.IsNullOrEmpty(entity.Email)
-    };
-}
-
-// ✅ CORRECT - Move logic to service
-public async Task<UserDto> GetUserAsync(int id)
-{
-    var user = await _repository.GetByIdAsync(id);
-    var dto = user.ToDto();
-    
-    // Business logic in service
-    dto.CanRequestOvertime = await CanUserRequestOvertimeAsync(user);
-    
-    return dto;
-}
-```
-
-## File Organization
-
-### Recommended Structure
-
-```
-Mappings/
-├── UserMappingExtensions.cs
-├── ProjectMappingExtensions.cs
-├── OvertimeRequestMappingExtensions.cs
-└── TimeEntryMappingExtensions.cs
-
-DTOs/
-├── Users/
-│   ├── UserDto.cs
-│   ├── UserDetailDto.cs
-│   ├── CreateUserDto.cs
-│   └── UpdateUserDto.cs
-├── Projects/
-│   ├── ProjectDto.cs
-│   ├── CreateProjectDto.cs
-│   └── UpdateProjectDto.cs
-└── Common/
-    ├── PagedResult.cs
-    └── PaginationParameters.cs
-```
-
-## Usage in Code
-
-### Repository (Use EF Core Projection for Collections)
+## Repository Usage
 
 ```csharp
 public async Task<PagedResult<UserDto>> GetPagedAsync(PaginationParameters parameters)
@@ -359,21 +214,21 @@ public async Task<PagedResult<UserDto>> GetPagedAsync(PaginationParameters param
 }
 ```
 
-### Service (Explicit Mapping)
+## Service Usage
 
 ```csharp
 public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
 {
     // DTO to Entity
     var user = dto.ToEntity();
-    
+
     // Business logic
     user.CreatedAt = DateTime.UtcNow;
     user.CreatedBy = _userContext.UserId;
-    
+
     await _repository.AddAsync(user);
     await _unitOfWork.SaveChangesAsync();
-    
+
     // Entity to DTO
     return user.ToDto();
 }
@@ -381,40 +236,19 @@ public async Task<UserDto> CreateUserAsync(CreateUserDto dto)
 public async Task UpdateUserAsync(int id, UpdateUserDto dto)
 {
     var user = await _repository.GetByIdAsync(id);
-    
+
     // Update DTO to Entity
     dto.MapToEntity(user);
-    
+
     // Business logic
     user.UpdatedAt = DateTime.UtcNow;
     user.UpdatedBy = _userContext.UserId;
-    
+
     await _unitOfWork.SaveChangesAsync();
 }
 ```
 
-### Controller (Use DTOs)
-
-```csharp
-[HttpGet("{id}")]
-public async Task<ActionResult<UserDto>> GetById(int id)
-{
-    var user = await _userService.GetUserByIdAsync(id);
-    // Already a DTO from service
-    return Ok(user);
-}
-
-[HttpPost]
-public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserDto dto)
-{
-    var user = await _userService.CreateUserAsync(dto);
-    return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
-}
-```
-
-## Validation Attributes
-
-### Common Attributes
+## Validation Attributes Example
 
 ```csharp
 public class CreateOvertimeRequestDto
@@ -435,24 +269,51 @@ public class CreateOvertimeRequestDto
 }
 ```
 
-## Quality Checklist
+## Common Mistakes to Avoid
 
-Before submitting DTO/mapping code:
+### ❌ Wrong: Business Logic in Mapping
 
-- [ ] No AutoMapper or similar libraries used
-- [ ] Collection queries use EF Core `.Select()` projection
-- [ ] Extension methods used only for single entities
-- [ ] Mappings are simple and deterministic
-- [ ] No business logic in mappings
-- [ ] No database queries in mappings
-- [ ] Separate DTOs for Create/Update/Response
-- [ ] DTOs have validation attributes
-- [ ] Extension methods have null checks
-- [ ] File organized in Mappings/ folder
+```csharp
+// ❌ WRONG - Business logic in mapping
+public static UserDto ToDto(this User entity)
+{
+    return new UserDto
+    {
+        Id = entity.Id,
+        Name = entity.Name,
+        // ❌ Business rule - should be in service
+        CanRequestOvertime = entity.ContractType == "FullTime" &&
+                           entity.YearsOfService > 1,
+        // ❌ Validation - should be in service or validator
+        IsValid = !string.IsNullOrEmpty(entity.Email)
+    };
+}
 
-## Files You Own
-- `**/DTOs/**/*.cs`
-- `**/Mappings/**/*.cs`
+// ✅ CORRECT - Move logic to service
+public async Task<UserDto> GetUserAsync(int id)
+{
+    var user = await _repository.GetByIdAsync(id);
+    var dto = user.ToDto();
 
-## When Done
-Report: DTOs created, mapping extensions implemented, validation rules applied.
+    // Business logic in service
+    dto.CanRequestOvertime = await CanUserRequestOvertimeAsync(user);
+
+    return dto;
+}
+```
+
+### ✅ Correct: Simple Mapping Only
+
+```csharp
+public static UserDto ToDto(this User entity)
+{
+    return new UserDto
+    {
+        Id = entity.Id,
+        Name = entity.Name ?? "Unknown", // Simple null handling
+        Status = entity.Status.ToString(), // Enum to string
+        CreatedAt = entity.CreatedAt,
+        Age = DateTime.UtcNow.Year - entity.BirthDate.Year // Simple calculation
+    };
+}
+```

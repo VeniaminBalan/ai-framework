@@ -1,31 +1,6 @@
----
-name: validation
-description: Validation specialist for FluentValidation. Use when creating validators, implementing validation rules, or working with complex validation logic.
----
+# Validation Examples
 
-When invoked, follow these steps:
-
-1. **Explore First**: Search for existing validators to understand naming conventions and validation patterns in use
-2. **Check Dependencies**: Verify the DTOs exist that need validation and understand their properties
-3. **Implement**: Create or modify validators following established patterns and the rules below
-4. **Validate**: Ensure all validation rules have clear error messages and async validations are properly implemented
-5. **Report**: Summarize validators created/modified, rules applied, and any async database checks added
-
-## Your Responsibility
-
-Manage all validation logic using FluentValidation. Ensure comprehensive validation of DTOs with clear, maintainable rules and helpful error messages.
-
-## Core Principles
-
-- **Use FluentValidation for all complex validation**
-- Use Data Annotations only for simple property constraints: `[Required]`, `[MaxLength]`, `[EmailAddress]`
-- All Create/Update DTOs must have validators
-- Business validation rules belong in validators
-- Error messages must be clear and actionable
-
-## Validator Patterns
-
-### Basic Validator
+## Basic Validator
 
 ```csharp
 public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
@@ -50,7 +25,7 @@ public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
 }
 ```
 
-### Validator with Dependencies (Async Validation)
+## Validator with Dependencies (Async Validation)
 
 ```csharp
 public class CreateOvertimeRequestDtoValidator : AbstractValidator<CreateOvertimeRequestDto>
@@ -94,7 +69,7 @@ public class CreateOvertimeRequestDtoValidator : AbstractValidator<CreateOvertim
 }
 ```
 
-### Cross-Property Validation
+## Cross-Property Validation
 
 ```csharp
 public class UpdateProjectDtoValidator : AbstractValidator<UpdateProjectDto>
@@ -116,7 +91,7 @@ public class UpdateProjectDtoValidator : AbstractValidator<UpdateProjectDto>
 }
 ```
 
-### Conditional Validation
+## Conditional Validation
 
 ```csharp
 public class CreateEmployeeDtoValidator : AbstractValidator<CreateEmployeeDto>
@@ -138,7 +113,7 @@ public class CreateEmployeeDtoValidator : AbstractValidator<CreateEmployeeDto>
 }
 ```
 
-### Collection Validation
+## Collection Validation
 
 ```csharp
 public class CreateBulkRequestDtoValidator : AbstractValidator<CreateBulkRequestDto>
@@ -198,31 +173,9 @@ RuleFor(x => x.Hours).MustBeInIncrements(0.25m);
 RuleFor(x => x.ProjectCode).MustBeValidProjectCode();
 ```
 
-## Registration and Integration
-
-### Service Registration
+## Manual Validation (for batch operations)
 
 ```csharp
-// Program.cs
-builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddFluentValidationClientsideAdapters();
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-```
-
-### Controller Integration
-
-```csharp
-// Automatic validation
-[HttpPost]
-public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserDto dto)
-{
-    // Validation happens automatically
-    // Returns 400 with errors if validation fails
-    var user = await _userService.CreateUserAsync(dto);
-    return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
-}
-
-// Manual validation (for batch operations)
 [HttpPost("batch")]
 public async Task<ActionResult> CreateBatch([FromBody] List<CreateUserDto> dtos)
 {
@@ -241,64 +194,6 @@ public async Task<ActionResult> CreateBatch([FromBody] List<CreateUserDto> dtos)
     await _userService.CreateBatchAsync(dtos);
     return Ok();
 }
-```
-
-## Common Validation Rules
-
-### String
-```csharp
-.NotEmpty()                    // Not null/empty
-.Length(5, 50)                 // Between 5-50 chars
-.MaximumLength(100)            // Max 100 chars
-.Matches("^[a-zA-Z]+$")       // Regex pattern
-.EmailAddress()                // Valid email
-.Must(BeValidName)             // Custom rule
-.MustAsync(BeUniqueName)       // Async rule
-```
-
-### Numeric
-```csharp
-.GreaterThan(0)                // > 0
-.GreaterThanOrEqualTo(18)      // >= 18
-.InclusiveBetween(18, 65)     // 18-65 inclusive
-.PrecisionScale(10, 2, false) // 10 digits, 2 decimals
-```
-
-### DateTime
-```csharp
-.LessThan(DateTime.Now)        // Past date
-.GreaterThan(x => x.StartDate) // After another date
-```
-
-### Collections
-```csharp
-.NotEmpty()                    // Not empty collection
-.Must(x => x.Count <= 10)     // Max 10 items
-RuleForEach(x => x.Items)     // Validate each item
-```
-
-### Enums
-```csharp
-.IsInEnum()                    // Valid enum value
-```
-
-## Error Messages
-
-```csharp
-// Simple message
-.WithMessage("Hours are required")
-
-// Message with value
-.WithMessage(x => $"Hours {x.Hours} invalid. Must be 0.5-12")
-
-// Message with placeholders
-.Length(10, 500).WithMessage("Between {MinLength}-{MaxLength} chars. You entered {TotalLength}")
-
-// Error code
-.WithErrorCode("PROJECT_REQUIRED")
-
-// Localized messages
-.WithMessage(localizer["NameRequired"])
 ```
 
 ## Testing Validators
@@ -346,37 +241,3 @@ public class ValidatorTests
     }
 }
 ```
-
-## File Organization
-
-```
-Validators/
-├── Users/
-│   ├── CreateUserDtoValidator.cs
-│   └── UpdateUserDtoValidator.cs
-├── Projects/
-│   ├── CreateProjectDtoValidator.cs
-│   └── UpdateProjectDtoValidator.cs
-├── OvertimeRequests/
-│   └── CreateOvertimeRequestDtoValidator.cs
-└── CustomValidators/
-    └── DateRangeValidator.cs
-```
-
-## Quality Checklist
-
-- [ ] All Create/Update DTOs have validators
-- [ ] Use FluentValidation, not just data annotations
-- [ ] Clear, actionable error messages
-- [ ] Async validation for database checks
-- [ ] Cross-property validation where needed
-- [ ] Custom validators for reusable rules
-- [ ] Validators registered in DI
-- [ ] All validators have unit tests
-- [ ] Valid and invalid scenarios tested
-
-## Files You Own
-- `**/Validators/**/*.cs`
-
-## When Done
-Report: Validators created, rules implemented, error messages defined, tests passing.

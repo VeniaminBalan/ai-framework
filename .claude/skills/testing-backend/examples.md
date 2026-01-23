@@ -1,33 +1,6 @@
----
-name: testing-backend
-description: Backend testing specialist for unit and integration tests. Use when writing tests, setting up test infrastructure, or ensuring code quality and coverage for backend .NET code.
----
+# Testing Backend Examples
 
-When invoked, follow these steps:
-
-1. **Explore First**: Search for existing tests to understand test project structure, naming conventions, and mocking patterns
-2. **Identify Coverage**: Determine what code needs testing and current coverage gaps
-3. **Implement**: Write unit and/or integration tests following established patterns and the rules below
-4. **Run Tests**: Execute all tests to ensure they pass and verify coverage meets requirements
-5. **Report**: Summarize tests created, coverage achieved, and any issues found
-
-## Your Responsibility
-
-Ensure code quality through comprehensive testing. Write unit tests, integration tests, and maintain minimum 90% test coverage.
-
-## Testing Requirements
-
-### Core Rules
-
-- Minimum 90% test coverage
-- Tests must be deterministic
-- Tests must be fast
-- Tests must be isolated
-- **Always run all tests before accepting new changes**
-
-## Unit Testing
-
-### Service Tests with Mocks
+## Service Tests with Mocks
 
 ```csharp
 public class UserServiceTests
@@ -117,7 +90,7 @@ public class UserServiceTests
 
         _userContextMock.Setup(c => c.UserId).Returns(currentUserId);
         _repositoryMock.Setup(r => r.ExistsByEmailAsync(dto.Email)).ReturnsAsync(false);
-        
+
         User capturedUser = null;
         _repositoryMock
             .Setup(r => r.AddAsync(It.IsAny<User>()))
@@ -136,7 +109,7 @@ public class UserServiceTests
 }
 ```
 
-### Repository Tests (Integration with InMemory DB)
+## Repository Tests (Integration with InMemory DB)
 
 ```csharp
 public class UserRepositoryTests : IDisposable
@@ -234,7 +207,7 @@ public class UserRepositoryTests : IDisposable
 }
 ```
 
-### Controller Tests
+## Controller Tests
 
 ```csharp
 public class UsersControllerTests
@@ -283,7 +256,7 @@ public class UsersControllerTests
         // Arrange
         var createDto = new CreateUserDto { Name = "New User", Email = "new@example.com" };
         var userDto = new UserDto { Id = 1, Name = "New User", Email = "new@example.com" };
-        
+
         _serviceMock.Setup(s => s.CreateUserAsync(createDto)).ReturnsAsync(userDto);
 
         // Act
@@ -357,7 +330,7 @@ public class UsersIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 
         // Assert
         response.EnsureSuccessStatusCode();
-        Assert.Equal("application/json; charset=utf-8", 
+        Assert.Equal("application/json; charset=utf-8",
             response.Content.Headers.ContentType.ToString());
     }
 
@@ -385,135 +358,3 @@ public class UsersIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     }
 }
 ```
-
-## Test Organization
-
-### File Structure
-
-```
-Tests/
-├── OvertimeRequest.Api.Tests/
-│   ├── Controllers/
-│   │   ├── UsersControllerTests.cs
-│   │   └── OvertimeRequestsControllerTests.cs
-│   ├── Services/
-│   │   ├── UserServiceTests.cs
-│   │   └── OvertimeServiceTests.cs
-│   ├── Integration/
-│   │   ├── CustomWebApplicationFactory.cs
-│   │   ├── UsersIntegrationTests.cs
-│   │   └── OvertimeIntegrationTests.cs
-│   └── Repositories/
-│       ├── UserRepositoryTests.cs
-│       └── OvertimeRepositoryTests.cs
-```
-
-## Quality Checklist
-
-Before submitting test code:
-
-- [ ] All new code has unit tests
-- [ ] Test coverage is at least 90%
-- [ ] All tests pass
-- [ ] Tests are deterministic (no flaky tests)
-- [ ] Tests are isolated (no shared state)
-- [ ] Integration tests use in-memory database
-- [ ] Mocks are used appropriately
-- [ ] Test names clearly describe what is tested
-- [ ] Arrange-Act-Assert pattern followed
-- [ ] Edge cases are tested
-
-## Running Tests
-
-```bash
-# Run all tests
-dotnet test
-
-# Run with coverage
-dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
-
-# Run specific test
-dotnet test --filter "FullyQualifiedName~UserServiceTests.GetUserByIdAsync_WhenUserExists_ReturnsUserDto"
-```
-
-## Files You Own
-- `**/Tests/**/*.cs`
-- Test infrastructure and fixtures
-
-## When Done
-Report: Tests written, coverage percentage, all tests passing, edge cases covered.
-
-- Unit testing (xUnit, Jasmine/Jest)
-- Integration testing
-- E2E testing (Playwright, Cypress)
-- Test-driven development (TDD)
-- Mocking and stubbing
-- Code coverage analysis
-
-## Files You Own
-- `**/*.spec.ts`
-- `**/*.test.ts`
-- `**/tests/**/*`
-- `**/*Tests.cs`
-- `**/*Test.cs`
-- `**/TestFixtures/**/*`
-- `cypress/**/*`, `playwright/**/*`
-
-## Test Pyramid
-- 70% Unit tests (fast, isolated)
-- 20% Integration tests (API, services)
-- 10% E2E tests (critical user journeys)
-
-## Rules You Must Follow
-
-### Test Structure (Arrange-Act-Assert)
-```csharp
-[Fact]
-public async Task GetById_WhenUserExists_ReturnsUser()
-{
-    // Arrange
-    var expectedUser = new User { Id = 1, Name = "Test" };
-    _mockRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(expectedUser);
-
-    // Act
-    var result = await _sut.GetByIdAsync(1);
-
-    // Assert
-    Assert.NotNull(result);
-    Assert.Equal(expectedUser.Name, result.Name);
-}
-```
-
-### Naming Convention
-`{MethodName}_{Scenario}_{ExpectedResult}`
-
-Examples:
-- `GetById_WhenUserExists_ReturnsUser`
-- `Create_WithInvalidInput_ThrowsValidationException`
-
-### Anti-Patterns to Avoid
-- Testing implementation details
-- Flaky tests (non-deterministic)
-- Test interdependence
-- Over-mocking
-- No assertions
-
-## Before Writing Tests
-1. Identify test type needed
-2. Plan test cases (happy path, edge cases, errors)
-3. Prepare test data using builders/factories
-
-## Quality Checklist
-- [ ] Tests are isolated and independent
-- [ ] Tests are deterministic
-- [ ] Names describe behavior
-- [ ] AAA structure followed
-- [ ] Edge cases covered
-
-## Coverage Targets
-- Overall: 80%
-- Critical paths: 95%
-- New code: 85%
-
-## When Done
-Report: tests added, coverage metrics, any flaky test risks.
