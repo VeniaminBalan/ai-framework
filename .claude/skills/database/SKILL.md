@@ -22,6 +22,61 @@ Manage all database interactions, Entity Framework Core configuration, repositor
 
 ## Core Principles
 
+### Entity Inheritance
+
+All entity classes **must** inherit from `Entity`:
+
+```csharp
+public class Entity
+{
+    public string ExternalId { get; set; } = Guid.CreateVersion7().ToString();
+    public int Id { get; set; } = default!; // created by the database, used for foreign keys
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedBy { get; set; }
+    public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string? UpdatedBy { get; set; }
+}
+```
+
+For domain models that publish domain events, inherit from `AggregateRoot`:
+
+```csharp
+public class AggregateRoot : Entity 
+{
+    private readonly List<IDomainEvent> _domainEvents = [];
+    
+    [NotMapped]
+    public ICollection<IDomainEvent> DomainEvents => _domainEvents;
+    
+    protected void RaiseDomainEvent(IDomainEvent domainEvent)
+    {
+        _domainEvents.Add(domainEvent);
+    }
+
+    public void ClearDomainEvents()
+    {
+        _domainEvents.Clear();
+    }
+}
+```
+
+### ID Strategy Rule
+
+**Always use integer IDs for entities and foreign keys for optimal query performance. Use GUIDs/strings (ExternalId) for external APIs and public-facing methods.**
+
+**Rationale:**
+- Integer IDs provide better database performance (smaller indexes, faster joins)
+- GUIDs/strings provide security and prevent enumeration in public APIs
+- The `Entity` base class provides both: `Id` (int) for internal use and `ExternalId` (string/Guid) for external APIs
+
+**Implementation:**
+- All entities use `int Id` as primary key (inherited from `Entity`)
+- All foreign keys use `int` for performance
+- Repository methods exposed to external layers use `ExternalId` parameter: `GetByIdAsync(string externalId)`
+- Internal repository methods may use `int Id` when needed for performance
+
+### Repository Rules
+
 Repositories must:
 - Use Entity Framework Core
 - Implement the Repository Pattern
@@ -36,6 +91,7 @@ Repositories must:
 
 Before submitting database code:
 
+- [ ] All entities inherit from `Entity`
 - [ ] Repository implements interface
 - [ ] Collection queries use explicit projection with `.Select()`
 - [ ] Collection queries return DTOs, not entities

@@ -113,55 +113,176 @@ public class UserRepository : IUserRepository
 }
 ```
 
+## Base Entity Class
+
+```csharp
+public class Entity
+{
+    public string ExternalId { get; set; } = Guid.CreateVersion7().ToString();
+    public int Id { get; set; } = default!; // created by the database, used for foreign keys
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedBy { get; set; }
+    public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string? UpdatedBy { get; set; }
+}
+
+public class AggregateRoot : Entity 
+{
+    private readonly List<IDomainEvent> _domainEvents = [];
+    
+    [NotMapped]
+    public ICollection<IDomainEvent> DomainEvents => _domainEvents;
+    
+    protected void RaiseDomainEvent(IDomainEvent domainEvent)
+    {
+        _domainEvents.Add(domainEvent);
+    }
+
+    public void ClearDomainEvents()
+    {
+        _domainEvents.Clear();
+    }
+}
+```
+
+## Entity Implementation Examples
+
+### ID Strategy Rule
+
+**Always use integer IDs for entities and foreign keys for optimal query performance. Use GUIDs/strings for external APIs and public-facing methods.**
+
+**Rationale:**
+- Integer IDs provide better database performance (smaller indexes, faster joins)
+- GUIDs/strings provide security and prevent enumeration in public APIs
+- Maintain integer PK internally, expose GUID externally via a separate column
+
+**Implementation Pattern:**
+```csharp
+// Entity with int PK and Guid for external use
+public class Order : Entity<int>
+{
+    public int CustomerId { get; set; } // FK uses int for performance
+    public decimal TotalAmount { get; set; }
+    public OrderStatus Status { get; set; }
+
+    public virtual Customer Customer { get; set; } = null!;
+    public virtual ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();
+}
+
+// Repository method uses Guid for external callers
+public async Task<Order> GetByIdAsync(string externalId)
+{
+    return await _context.Orders
+        .Include(o => o.Customer)
+        .FirstOrDefaultAsync(o => o.externalId == externalId);
+}
+```
+
+**Standard Examples:**
+```csharp
+// Entity with int ID
+public class User : Entity
+{
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+
+    public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public virtual ICollection<OvertimeRequest> OvertimeRequests { get; set; } = new List<OvertimeRequest>();
+}
+```
+
 ## Unit of Work Implementation
 
 ```csharp
-public class UnitOfWork : IUnitOfWork
+public class UnitOfWork(AppDbContext context, IMediator mediator/*optional*/, IUserContext userContext) : IUnitOfWork
 {
-    private readonly OvertimeDbContext _context;
-    private readonly IUserContext _userContext;
-
-    public UnitOfWork(OvertimeDbContext context, IUserContext userContext)
+    public async Task InTransactionAsync(Func<Task> action, CancellationToken cancellationToken = default)
     {
-        _context = context;
-        _userContext = userContext;
+        if (action == null) throw new ArgumentNullException(nameof(action));
+        _logger.LogdDebug("Starting async transaction.");
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await action(_dbContext);
+            await SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            _logger.LogdDebug("Async transaction committed.");
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogError(ex, "Async transaction rolled back due to exception.");
+            throw;
+        }
     }
 
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public async Task<TReturn> InTransactionAsync<TReturn>(Func<Task<TReturn>> action, CancellationToken cancellationToken = default)
     {
-        // Set audit fields before saving
-        var entries = _context.ChangeTracker.Entries<Entity>()
-            .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
-
-        var currentUserId = _userContext.GetCurrentUserId();
-        var currentTime = DateTime.UtcNow;
-
-        foreach (var entry in entries)
+        if (action == null) throw new ArgumentNullException(nameof(action));
+        _logger.LogdDebug("Starting async transaction (generic).");
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        try
         {
-            if (entry.State == EntityState.Added)
-            {
-                entry.Entity.CreatedBy = currentUserId;
-                entry.Entity.CreatedOn = currentTime;
-            }
+            var result = await action();
+            await SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            _logger.LogdDebug("Async transaction (generic) committed.");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogError(ex, "Async transaction (generic) rolled back due to exception.");
+            throw;
+        }
+    }
 
-            if (entry.State == EntityState.Modified)
+    private async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Auto-update audit fields on Entity base class
+        var currentUser = userContext.GetCurrentUserId();
+        var now = DateTime.UtcNow;
+        
+        foreach (var entry in context.ChangeTracker.Entries<Entity>())
+        {
+            switch (entry.State)
             {
-                entry.Entity.ModifiedBy = currentUserId;
-                entry.Entity.ModifiedOn = currentTime;
+                case EntityState.Added:
+                    entry.Entity.CreatedAt = now;
+                    entry.Entity.CreatedBy = currentUser;
+                    entry.Entity.UpdatedAt = now;
+                    entry.Entity.UpdatedBy = currentUser;
+                    break;
+                    
+                case EntityState.Modified:
+                    entry.Entity.UpdatedAt = now;
+                    entry.Entity.UpdatedBy = currentUser;
+                    break;
             }
         }
-
-        return await _context.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task<IDbContextTransaction> BeginTransactionAsync()
-    {
-        return await _context.Database.BeginTransactionAsync();
-    }
-
-    public void Dispose()
-    {
-        _context?.Dispose();
+        
+        var entitiesWithDomainEvents = context.ChangeTracker.Entries<AggregateRoot>()
+            .Select(e => e.Entity)
+            .Where(e => e.DomainEvents.Count != 0)
+            .ToList();
+        
+        var domainEvents = entitiesWithDomainEvents
+            .SelectMany(e => e.DomainEvents)
+            .ToList();
+        
+        await context.SaveChangesAsync(cancellationToken);
+        
+        // Wrap each domain event with context and publish
+        foreach (var domainEvent in domainEvents)
+        {
+            await mediator.Publish(domainEvent, cancellationToken); // optinally when MediatR library used
+        }
+        
+        foreach (var entity in entitiesWithDomainEvents)
+        {
+            entity.ClearDomainEvents();
+        }
     }
 }
 ```
@@ -224,22 +345,15 @@ public async Task ApproveOvertimeAsync(int requestId)
 {
     using var transaction = await _unitOfWork.BeginTransactionAsync();
 
-    try
+    await _unitOfWork.InTransactionAsync(_ => 
     {
         var request = await _overtimeRepository.GetByIdAsync(requestId);
-        request.Status = OvertimeStatus.Approved;
+        request.Approve()
 
         var user = await _userRepository.GetByIdAsync(request.UserId);
         user.OvertimeBalance += request.Hours;
+    });
 
-        await _unitOfWork.SaveChangesAsync();
-        await transaction.CommitAsync();
-    }
-    catch
-    {
-        await transaction.RollbackAsync();
-        throw;
-    }
 }
 ```
 
@@ -254,6 +368,17 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasKey(u => u.Id);
 
+        // Audit fields from Entity<TId>
+        builder.Property(u => u.CreatedAt)
+            .IsRequired();
+
+        builder.Property(u => u.CreatedBy)
+            .HasMaxLength(100);
+
+        builder.Property(u => u.UpdatedBy)
+            .HasMaxLength(100);
+
+        // Entity-specific properties
         builder.Property(u => u.Name)
             .IsRequired()
             .HasMaxLength(100);
@@ -269,6 +394,52 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne(o => o.User)
             .HasForeignKey(o => o.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+```
+
+## Base Entity Configuration (Optional)
+
+```csharp
+// Create a base configuration for common audit fields
+public abstract class EntityConfiguration<TEntity, TId> : IEntityTypeConfiguration<TEntity>
+    where TEntity : Entity<TId>
+    where TId : notnull
+{
+    public virtual void Configure(EntityTypeBuilder<TEntity> builder)
+    {
+        builder.HasKey(e => e.Id);
+
+        builder.Property(e => e.CreatedAt)
+            .IsRequired();
+
+        builder.Property(e => e.CreatedBy)
+            .HasMaxLength(100);
+
+        builder.Property(e => e.UpdatedBy)
+            .HasMaxLength(100);
+    }
+}
+
+// Usage
+public class UserConfiguration : EntityConfiguration<User, int>
+{
+    public override void Configure(EntityTypeBuilder<User> builder)
+    {
+        base.Configure(builder); // Apply base audit field configuration
+
+        builder.ToTable("Users");
+
+        builder.Property(u => u.Name)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.Property(u => u.Email)
+            .IsRequired()
+            .HasMaxLength(255);
+
+        builder.HasIndex(u => u.Email)
+            .IsUnique();
     }
 }
 ```
