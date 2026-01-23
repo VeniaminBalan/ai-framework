@@ -1,57 +1,60 @@
 ---
-name: frontend-styling
-description: Styling specialist for React applications using Tailwind CSS. Use when implementing visual designs, responsive layouts, dark mode, animations, or component variants.
+name: styling
+description: Styling specialist for React applications using Tailwind CSS and shadcn/ui. Use when implementing visual designs, responsive layouts, dark mode, animations, or component variants.
 ---
 
 When invoked, follow these steps:
 
-1. **Explore First**: Search for existing styling patterns, design tokens, and theme configuration in the project
-2. **Check Dependencies**: Verify Tailwind CSS configuration and any UI libraries (DaisyUI) in use
-3. **Implement**: Apply styling following established patterns and rules below
+1. **Explore First**: Search for existing styling patterns, design tokens, theme configuration, and shadcn/ui components in the project
+2. **Check Dependencies**: Verify Tailwind CSS configuration and shadcn/ui setup
+3. **Implement**: Apply styling following established patterns and rules below, preferring shadcn/ui components
 4. **Validate**: Run through the quality checklist before completing
-5. **Report**: Summarize styling applied, responsive breakpoints used, and any new patterns established
+5. **Report**: Summarize styling applied, shadcn/ui components used, responsive breakpoints, and any new patterns established
 
 ## Your Responsibility
 
-Styling handles visual presentation. Styles should be consistent, accessible, and responsive.
+Styling handles visual presentation. Use shadcn/ui components as the foundation, customize with Tailwind CSS utilities.
 
 ## Reference Files
 
-- **reference.md** - Detailed rules for Tailwind CSS patterns, design tokens, responsive design, and dark mode
-- **examples.md** - Code examples for component variants, animations, conditional classes, and accessibility styling
+- **reference.md** - Detailed rules for Tailwind CSS patterns, shadcn/ui theming, design tokens, responsive design, and dark mode
+- **examples.md** - Code examples for shadcn/ui components, component variants, animations, and accessibility styling
 
 ## Core Principles
 
 Styling must:
-- Use Tailwind CSS utilities consistently
+- Use shadcn/ui components as the primary UI library
+- Customize components with Tailwind CSS utilities
+- Use the `cn()` utility for conditional classes
+- Follow shadcn/ui theming with CSS variables
 - Follow mobile-first responsive design
-- Use CSS variables/design tokens for consistency
 - Ensure WCAG AA color contrast (4.5:1 for text)
 - Provide visible focus indicators
 - Respect reduced motion preferences
-- Support dark mode (if applicable)
+- Support dark mode via shadcn/ui theme system
 
 ## Quality Checklist
 
 Before submitting styling code:
 
+- [ ] Uses shadcn/ui components where available
+- [ ] Uses `cn()` utility for conditional classes
+- [ ] Follows shadcn/ui CSS variable theming
 - [ ] Consistent styling approach used throughout
 - [ ] Mobile-first responsive design
-- [ ] Design tokens/CSS variables for consistency
 - [ ] Color contrast meets WCAG AA (4.5:1)
-- [ ] Focus indicators are visible (2px outline)
-- [ ] Dark mode support (if applicable)
+- [ ] Focus indicators are visible
+- [ ] Dark mode support via theme provider
 - [ ] Reduced motion preferences respected
 - [ ] No inline styles (except dynamic values)
-- [ ] Reusable component variants
 - [ ] Proper spacing and typography scale
-- [ ] Responsive images and media
 - [ ] Performance optimized (minimal bundle size)
 
 ## Files You Own
 - `**/globals.css`
 - `tailwind.config.*`
-- Component styling classes
+- `**/components/ui/**` (shadcn/ui components)
+- `**/lib/utils.ts` (cn utility)
 
 ## When Done
-Report: Styling applied, responsive breakpoints, design tokens used, accessibility considerations.
+Report: Styling applied, shadcn/ui components used, responsive breakpoints, design tokens, accessibility considerations.

@@ -1,67 +1,246 @@
 # Styling Reference
 
-Detailed rules and conventions for styling React applications with Tailwind CSS.
+Detailed rules and conventions for styling React applications with Tailwind CSS and shadcn/ui.
 
-## Primary Styling Solution
+## Tech Stack
 
-The project uses **Tailwind CSS** as the primary styling solution.
+- **Tailwind CSS** - Utility-first CSS framework
+- **shadcn/ui** - Re-usable component library built on Radix UI
+- **class-variance-authority (CVA)** - Component variants
+- **clsx + tailwind-merge** - Conditional class merging via `cn()` utility
 
-## Design Tokens / CSS Variables
+## shadcn/ui Overview
 
-```css
-/* globals.css */
-:root {
-  /* Colors */
-  --color-primary: #3b82f6;
-  --color-primary-dark: #2563eb;
-  --color-primary-light: #60a5fa;
+shadcn/ui is NOT a traditional component library. Components are copied into your project and can be customized. They are built on:
+- **Radix UI** - Unstyled, accessible primitives
+- **Tailwind CSS** - Styling
+- **CVA** - Variant management
 
-  --color-secondary: #64748b;
-  --color-danger: #ef4444;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
+### Installation
 
-  /* Text */
-  --color-text: #1f2937;
-  --color-text-light: #6b7280;
-  --color-text-lighter: #9ca3af;
+```bash
+# Initialize shadcn/ui
+npx shadcn@latest init
 
-  /* Background */
-  --color-bg: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
+# Add components as needed
+npx shadcn@latest add button
+npx shadcn@latest add card
+npx shadcn@latest add dialog
+npx shadcn@latest add input
+npx shadcn@latest add select
+npx shadcn@latest add table
+```
 
-  /* Spacing */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
+### Project Structure
 
-  /* Border radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-full: 9999px;
+```
+src/
+├── components/
+│   └── ui/           # shadcn/ui components
+│       ├── button.tsx
+│       ├── card.tsx
+│       ├── dialog.tsx
+│       ├── input.tsx
+│       └── ...
+└── lib/
+    └── utils.ts      # cn() utility
+```
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+## The `cn()` Utility
 
-  /* Transitions */
-  --transition-fast: 150ms;
-  --transition-base: 200ms;
-  --transition-slow: 300ms;
-}
+Always use `cn()` for combining classes:
 
-[data-theme='dark'] {
-  --color-text: #f9fafb;
-  --color-text-light: #d1d5db;
-  --color-bg: #1f2937;
-  --color-bg-secondary: #111827;
+```typescript
+// lib/utils.ts
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 ```
+
+Usage:
+```typescript
+import { cn } from "@/lib/utils";
+
+<div className={cn(
+  "base-classes",
+  isActive && "active-classes",
+  className
+)} />
+```
+
+## shadcn/ui CSS Variables (Theming)
+
+shadcn/ui uses CSS variables for theming. These are defined in `globals.css`:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+```
+
+## Tailwind Config for shadcn/ui
+
+```typescript
+// tailwind.config.ts
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: ["class"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+};
+
+export default config;
+```
+
+## Common shadcn/ui Components
+
+| Component | Use Case |
+|-----------|----------|
+| `Button` | Actions, form submissions |
+| `Card` | Content containers |
+| `Dialog` | Modals, confirmations |
+| `Input` | Text inputs |
+| `Label` | Form labels |
+| `Select` | Dropdowns |
+| `Table` | Data tables |
+| `Tabs` | Tabbed interfaces |
+| `Toast` | Notifications |
+| `Form` | Form handling with react-hook-form |
+| `Skeleton` | Loading states |
+| `Alert` | Alerts and notifications |
+| `Badge` | Status indicators |
+| `Dropdown Menu` | Menus |
+| `Sheet` | Side panels |
 
 ## Responsive Design
 
@@ -73,51 +252,24 @@ The project uses **Tailwind CSS** as the primary styling solution.
 - `2xl`: 1536px
 
 ### Mobile-First Approach
-```css
-/* Start with mobile styles, then add breakpoints */
-.container {
-  padding: 1rem;      /* Mobile */
-}
-
-@media (min-width: 768px) {
-  .container {
-    padding: 2rem;    /* Tablet and up */
-  }
-}
-
-@media (min-width: 1024px) {
-  .container {
-    padding: 3rem;    /* Desktop and up */
-  }
-}
+```typescript
+<div className="p-4 md:p-6 lg:p-8">
+  <h1 className="text-xl md:text-2xl lg:text-3xl">Title</h1>
+</div>
 ```
 
-## Accessibility in Styling
+## Accessibility
+
+shadcn/ui components are built on Radix UI, which provides:
+- Full keyboard navigation
+- Focus management
+- Screen reader support
+- ARIA attributes
 
 ### Focus Indicators
 ```css
-button:focus,
-a:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-```
-
-### Skip to Content Link
-```css
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 0;
-  background: var(--color-primary);
-  color: white;
-  padding: 8px;
-  z-index: 100;
-}
-
-.skip-link:focus {
-  top: 0;
-}
+/* Already handled by shadcn/ui, but can customize */
+.focus-visible:ring-2 .focus-visible:ring-ring .focus-visible:ring-offset-2
 ```
 
 ### Reduced Motion
@@ -133,41 +285,15 @@ a:focus {
 }
 ```
 
-### High Contrast Mode
-```css
-@media (prefers-contrast: high) {
-  .card {
-    border: 2px solid currentColor;
-  }
-}
-```
-
-## Color Contrast Requirements
-
-**WCAG AA:** 4.5:1 normal text, 3:1 large text
-**WCAG AAA:** 7:1 normal text, 4.5:1 large text
-
-```css
-/* Good contrast */
-.text-primary { color: #1f2937; } /* 16:1 on white */
-.button-primary { background: #2563eb; color: #ffffff; } /* 8.6:1 */
-
-/* Bad - insufficient */
-.text-light { color: #cbd5e0; } /* 1.6:1 - FAIL */
-
-/* Fixed */
-.text-light { color: #4a5568; } /* 7.5:1 - PASS */
-```
-
 ## Best Practices
 
-1. **Consistent approach**: Use one primary styling method throughout
-2. **Mobile-first**: Start with mobile styles, then add breakpoints
-3. **Design tokens**: Use CSS variables for colors, spacing, typography
-4. **Avoid inline styles**: Except for truly dynamic values
-5. **BEM or utility-first**: Choose a naming convention and stick to it
-6. **Color contrast**: Ensure WCAG AA compliance (4.5:1 for text)
-7. **Semantic classes**: Name classes by purpose, not appearance
-8. **Reusable components**: Extract common UI patterns
-9. **Performance**: Minimize CSS bundle size, use code splitting
-10. **Dark mode**: Support system preferences and manual toggle
+1. **Use shadcn/ui components** - Don't reinvent accessible components
+2. **Use `cn()` utility** - Always use for conditional classes
+3. **Follow theming** - Use CSS variables for colors
+4. **Customize in place** - shadcn/ui components can be modified directly
+5. **Mobile-first** - Start with mobile styles, add breakpoints
+6. **Dark mode** - Use the theme provider and `.dark` class
+7. **Semantic colors** - Use `primary`, `secondary`, `destructive`, etc.
+8. **Accessible contrast** - Ensure WCAG AA compliance (4.5:1)
+9. **Reuse variants** - Use CVA for consistent component variants
+10. **Don't fight the system** - Work with shadcn/ui patterns, not against them
