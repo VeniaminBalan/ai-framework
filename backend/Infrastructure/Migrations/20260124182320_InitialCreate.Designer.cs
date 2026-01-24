@@ -2,9 +2,9 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PatientSyncHealth.Infrastructure.Data;
 
 #nullable disable
@@ -12,8 +12,8 @@ using PatientSyncHealth.Infrastructure.Data;
 namespace PatientSyncHealth.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260123195523_AddPatientEntity")]
-    partial class AddPatientEntity
+    [Migration("20260124182320_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -21,70 +21,82 @@ namespace PatientSyncHealth.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.2")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("PatientSyncHealth.Domain.Aggregates.Patient.Patient", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("DateOfBirth")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ExaminationFrequency")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Gender")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
                     b.Property<DateTime?>("LastExaminationDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("NextExaminationDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("_identificationNumberType")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("IdentificationNumberType");
+
+                    b.Property<string>("_identificationNumberValue")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("IdentificationNumber");
 
                     b.HasKey("Id");
 
@@ -97,6 +109,9 @@ namespace PatientSyncHealth.Infrastructure.Migrations
 
                     b.HasIndex("NextExaminationDate");
 
+                    b.HasIndex("_identificationNumberValue")
+                        .IsUnique();
+
                     b.HasIndex("IsActive", "NextExaminationDate");
 
                     b.ToTable("Patients", (string)null);
@@ -107,35 +122,35 @@ namespace PatientSyncHealth.Infrastructure.Migrations
                     b.OwnsOne("PatientSyncHealth.Domain.ValueObjects.Address", "Address", b1 =>
                         {
                             b1.Property<int>("PatientId")
-                                .HasColumnType("int");
+                                .HasColumnType("integer");
 
                             b1.Property<string>("City")
                                 .IsRequired()
                                 .HasMaxLength(100)
-                                .HasColumnType("nvarchar(100)")
+                                .HasColumnType("character varying(100)")
                                 .HasColumnName("Address_City");
 
                             b1.Property<string>("Country")
                                 .IsRequired()
                                 .HasMaxLength(100)
-                                .HasColumnType("nvarchar(100)")
+                                .HasColumnType("character varying(100)")
                                 .HasColumnName("Address_Country");
 
                             b1.Property<string>("County")
                                 .IsRequired()
                                 .HasMaxLength(100)
-                                .HasColumnType("nvarchar(100)")
+                                .HasColumnType("character varying(100)")
                                 .HasColumnName("Address_County");
 
                             b1.Property<string>("PostalCode")
                                 .HasMaxLength(6)
-                                .HasColumnType("nvarchar(6)")
+                                .HasColumnType("character varying(6)")
                                 .HasColumnName("Address_PostalCode");
 
                             b1.Property<string>("Street")
                                 .IsRequired()
                                 .HasMaxLength(200)
-                                .HasColumnType("nvarchar(200)")
+                                .HasColumnType("character varying(200)")
                                 .HasColumnName("Address_Street");
 
                             b1.HasKey("PatientId");
@@ -146,37 +161,15 @@ namespace PatientSyncHealth.Infrastructure.Migrations
                                 .HasForeignKey("PatientId");
                         });
 
-                    b.OwnsOne("PatientSyncHealth.Domain.ValueObjects.Cnp", "Cnp", b1 =>
-                        {
-                            b1.Property<int>("PatientId")
-                                .HasColumnType("int");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(13)
-                                .HasColumnType("nvarchar(13)")
-                                .HasColumnName("Cnp");
-
-                            b1.HasKey("PatientId");
-
-                            b1.HasIndex("Value")
-                                .IsUnique();
-
-                            b1.ToTable("Patients");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PatientId");
-                        });
-
                     b.OwnsOne("PatientSyncHealth.Domain.ValueObjects.Email", "Email", b1 =>
                         {
                             b1.Property<int>("PatientId")
-                                .HasColumnType("int");
+                                .HasColumnType("integer");
 
                             b1.Property<string>("Value")
                                 .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("nvarchar(255)")
+                                .HasColumnType("character varying(255)")
                                 .HasColumnName("Email");
 
                             b1.HasKey("PatientId");
@@ -190,12 +183,12 @@ namespace PatientSyncHealth.Infrastructure.Migrations
                     b.OwnsOne("PatientSyncHealth.Domain.ValueObjects.PhoneNumber", "Phone", b1 =>
                         {
                             b1.Property<int>("PatientId")
-                                .HasColumnType("int");
+                                .HasColumnType("integer");
 
                             b1.Property<string>("Value")
                                 .IsRequired()
                                 .HasMaxLength(20)
-                                .HasColumnType("nvarchar(20)")
+                                .HasColumnType("character varying(20)")
                                 .HasColumnName("Phone");
 
                             b1.HasKey("PatientId");
@@ -207,9 +200,6 @@ namespace PatientSyncHealth.Infrastructure.Migrations
                         });
 
                     b.Navigation("Address");
-
-                    b.Navigation("Cnp")
-                        .IsRequired();
 
                     b.Navigation("Email");
 

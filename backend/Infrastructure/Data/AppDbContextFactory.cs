@@ -13,8 +13,8 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
         // Use a default connection string for design-time operations
-        optionsBuilder.UseSqlServer(
-            "Server=(localdb)\\mssqllocaldb;Database=PatientSyncHealth;Trusted_Connection=True;MultipleActiveResultSets=true");
+        optionsBuilder.UseNpgsql(
+            "Host=localhost;Port=5432;Database=PatientSyncHealth;Username=postgres;Password=postgres");
 
         return new AppDbContext(optionsBuilder.Options);
     }

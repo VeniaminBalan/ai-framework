@@ -11,7 +11,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
-      - ConnectionStrings__DefaultConnection=Server=db;Database=PatientSyncHealth;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=PatientSyncHealth;Username=postgres;Password=YourStrong@Passw0rd
     depends_on:
       db:
         condition: service_healthy
@@ -19,18 +19,18 @@ services:
       - patientsynchealth-network
 
   db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: postgres:18
     container_name: patientsynchealth-db
     ports:
-      - "1433:1433"
+      - "5432:5432"
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=YourStrong@Passw0rd
-      - MSSQL_PID=Developer
+      - POSTGRES_DB=PatientSyncHealth
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=YourStrong@Passw0rd
     volumes:
-      - sqlserver-data:/var/opt/mssql
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -C -Q "SELECT 1" || exit 1
+      test: ["CMD-SHELL", "pg_isready -U postgres -d PatientSyncHealth"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -39,7 +39,7 @@ services:
       - patientsynchealth-network
 
 volumes:
-  sqlserver-data:
+  postgres-data:
 
 networks:
   patientsynchealth-network:
