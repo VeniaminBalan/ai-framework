@@ -1,5 +1,4 @@
 using FluentValidation;
-using PatientSyncHealth.Domain.Enums;
 using PatientSyncHealth.Domain.Interfaces;
 using PatientSyncHealth.DTOs.Common;
 using PatientSyncHealth.DTOs.Patients;
@@ -31,16 +30,10 @@ public class CreatePatientDtoValidator : AbstractValidator<CreatePatientDto>
 
         RuleFor(x => x.DateOfBirth)
             .NotEmpty().WithMessage("Date of birth is required")
-            .LessThan(DateTime.Today).WithMessage("Date of birth must be in the past")
-            .Must((dto, dob) => MatchesIdentificationNumberDateOfBirth(dto.IdentificationNumber, dob))
-            .WithMessage("Date of birth does not match the identification number")
-            .When(dto => dto.IdentificationNumber != null && IdentificationNumberValidator.EncodesDateOfBirth(dto.IdentificationNumber.Type));
+            .LessThan(DateTime.Today).WithMessage("Date of birth must be in the past");
 
         RuleFor(x => x.Gender)
-            .IsInEnum().WithMessage("Invalid gender value")
-            .Must((dto, gender) => MatchesIdentificationNumberGender(dto.IdentificationNumber, gender))
-            .WithMessage("Gender does not match the identification number")
-            .When(dto => dto.IdentificationNumber != null && IdentificationNumberValidator.EncodesGender(dto.IdentificationNumber.Type));
+            .IsInEnum().WithMessage("Invalid gender value");
 
         RuleFor(x => x.Email)
             .EmailAddress().WithMessage("Invalid email format")
@@ -66,30 +59,5 @@ public class CreatePatientDtoValidator : AbstractValidator<CreatePatientDto>
             return true; // Let other validators handle format issues
 
         return !await _patientRepository.ExistsByIdentificationNumberAsync(idNumber.Value);
-    }
-
-    private static bool MatchesIdentificationNumberDateOfBirth(IdentificationNumberDto? idNumber, DateTime dateOfBirth)
-    {
-        if (idNumber == null)
-            return true;
-
-        var extractedDob = IdentificationNumberValidator.ExtractDateOfBirth(idNumber.Value, idNumber.Type);
-        if (extractedDob == null)
-            return true; // Let other validators handle format issues or type doesn't encode DOB
-
-        return extractedDob.Value.Date == dateOfBirth.Date;
-    }
-
-    private static bool MatchesIdentificationNumberGender(IdentificationNumberDto? idNumber, Gender gender)
-    {
-        if (idNumber == null)
-            return true;
-
-        var extractedGender = IdentificationNumberValidator.ExtractGender(idNumber.Value, idNumber.Type);
-        if (extractedGender == null)
-            return true; // Let other validators handle format issues or type doesn't encode gender
-
-        // Allow if extracted indicates "Other" or if genders match
-        return extractedGender == Gender.Other || extractedGender == gender;
     }
 }

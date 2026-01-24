@@ -41,8 +41,8 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
             .HasConversion<string>()
             .HasMaxLength(20);
 
-        // Identification Number - EF Complex Type (storage only)
-        builder.ComplexProperty(p => p.IdentificationNumberData, idNumber =>
+        // Identification Number - EF Complex Type
+        builder.ComplexProperty(p => p.IdentificationNumber, idNumber =>
         {
             idNumber.Property(i => i.Value)
                 .HasColumnName("IdentificationNumber")
@@ -55,9 +55,6 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
                 .HasConversion<string>()
                 .HasMaxLength(5);
         });
-
-        // Ignore the domain value object (computed property)
-        builder.Ignore(p => p.IdentificationNumber);
 
         // Email Value Object - owned type (optional)
         builder.OwnsOne(p => p.Email, email =>

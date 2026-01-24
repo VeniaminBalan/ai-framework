@@ -4,52 +4,84 @@ using PatientSyncHealth.Domain.ValueObjects;
 
 namespace PatientSyncHealth.Tests.Domain.ValueObjects;
 
-public class PersonalIdentificationNumberTests
+public class IdentificationNumberTests
 {
     private const string ValidRomanianCnp = "5020813226919";
     private const string ValidMoldovanIdnp = "2002500081628";
 
-    #region Factory Method - Create
+    #region Constructor
 
     [Fact]
-    public void Create_WithRomanianType_ShouldReturnRomanianCnp()
+    public void Constructor_WithValidRomanianNumber_ShouldCreateIdentificationNumber()
     {
-        var pin = PersonalIdentificationNumber.Create(ValidRomanianCnp, IdentificationNumberType.RO);
+        var idNumber = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
 
-        pin.Should().BeOfType<RomanianCnp>();
-        pin.Value.Should().Be(ValidRomanianCnp);
-        pin.Type.Should().Be(IdentificationNumberType.RO);
+        idNumber.Value.Should().Be(ValidRomanianCnp);
+        idNumber.Type.Should().Be(IdentificationNumberType.RO);
     }
 
     [Fact]
-    public void Create_WithMoldovanType_ShouldReturnMoldovanIdnp()
+    public void Constructor_WithValidMoldovanNumber_ShouldCreateIdentificationNumber()
     {
-        var pin = PersonalIdentificationNumber.Create(ValidMoldovanIdnp, IdentificationNumberType.MD);
+        var idNumber = new IdentificationNumber(ValidMoldovanIdnp, IdentificationNumberType.MD);
 
-        pin.Should().BeOfType<MoldovanIdnp>();
-        pin.Value.Should().Be(ValidMoldovanIdnp);
-        pin.Type.Should().Be(IdentificationNumberType.MD);
+        idNumber.Value.Should().Be(ValidMoldovanIdnp);
+        idNumber.Type.Should().Be(IdentificationNumberType.MD);
     }
 
     [Fact]
-    public void Create_WithInvalidRomanianCnp_ShouldThrowDomainException()
+    public void Constructor_WithNullValue_ShouldThrowDomainException()
     {
-        var act = () => PersonalIdentificationNumber.Create("invalid", IdentificationNumberType.RO);
-        act.Should().Throw<DomainException>();
+        var act = () => new IdentificationNumber(null!, IdentificationNumberType.RO);
+        act.Should().Throw<DomainException>()
+            .WithMessage("Identification number is required");
     }
 
     [Fact]
-    public void Create_WithInvalidMoldovanIdnp_ShouldThrowDomainException()
+    public void Constructor_WithEmptyValue_ShouldThrowDomainException()
     {
-        var act = () => PersonalIdentificationNumber.Create("invalid", IdentificationNumberType.MD);
-        act.Should().Throw<DomainException>();
+        var act = () => new IdentificationNumber("", IdentificationNumberType.RO);
+        act.Should().Throw<DomainException>()
+            .WithMessage("Identification number is required");
     }
 
     [Fact]
-    public void Create_WithUnsupportedType_ShouldThrowDomainException()
+    public void Constructor_WithWhitespaceValue_ShouldThrowDomainException()
     {
-        var act = () => PersonalIdentificationNumber.Create("1234567890123", (IdentificationNumberType)99);
-        act.Should().Throw<DomainException>().WithMessage("*Unsupported*");
+        var act = () => new IdentificationNumber("   ", IdentificationNumberType.RO);
+        act.Should().Throw<DomainException>()
+            .WithMessage("Identification number is required");
+    }
+
+    [Theory]
+    [InlineData("123456789012")] // Too short (12 digits)
+    [InlineData("12345678901234")] // Too long (14 digits)
+    [InlineData("123")] // Too short
+    public void Constructor_WithInvalidLength_ShouldThrowDomainException(string value)
+    {
+        var act = () => new IdentificationNumber(value, IdentificationNumberType.RO);
+        act.Should().Throw<DomainException>()
+            .WithMessage("Identification number must be exactly 13 digits");
+    }
+
+    [Theory]
+    [InlineData("123456789012A")] // Contains letter
+    [InlineData("12345 6789012")] // Contains space
+    [InlineData("1234567890-12")] // Contains dash
+    [InlineData("1234567890.12")] // Contains dot
+    public void Constructor_WithNonDigitCharacters_ShouldThrowDomainException(string value)
+    {
+        var act = () => new IdentificationNumber(value, IdentificationNumberType.RO);
+        act.Should().Throw<DomainException>()
+            .WithMessage("Identification number must be exactly 13 digits");
+    }
+
+    [Fact]
+    public void Constructor_WithValidNumberAndWhitespace_ShouldTrimAndCreate()
+    {
+        var idNumber = new IdentificationNumber("  5020813226919  ", IdentificationNumberType.RO);
+
+        idNumber.Value.Should().Be(ValidRomanianCnp);
     }
 
     #endregion
@@ -59,102 +91,15 @@ public class PersonalIdentificationNumberTests
     [Fact]
     public void Type_ForRomanianCnp_ShouldReturnRO()
     {
-        PersonalIdentificationNumber pin = new RomanianCnp(ValidRomanianCnp);
-        pin.Type.Should().Be(IdentificationNumberType.RO);
+        var idNumber = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
+        idNumber.Type.Should().Be(IdentificationNumberType.RO);
     }
 
     [Fact]
     public void Type_ForMoldovanIdnp_ShouldReturnMD()
     {
-        PersonalIdentificationNumber pin = new MoldovanIdnp(ValidMoldovanIdnp);
-        pin.Type.Should().Be(IdentificationNumberType.MD);
-    }
-
-    #endregion
-
-    #region EncodesGender Property
-
-    [Fact]
-    public void EncodesGender_ForRomanianCnp_ShouldReturnTrue()
-    {
-        PersonalIdentificationNumber pin = new RomanianCnp(ValidRomanianCnp);
-        pin.EncodesGender.Should().BeTrue();
-    }
-
-    [Fact]
-    public void EncodesGender_ForMoldovanIdnp_ShouldReturnFalse()
-    {
-        PersonalIdentificationNumber pin = new MoldovanIdnp(ValidMoldovanIdnp);
-        pin.EncodesGender.Should().BeFalse();
-    }
-
-    #endregion
-
-    #region EncodesDateOfBirth Property
-
-    [Fact]
-    public void EncodesDateOfBirth_ForRomanianCnp_ShouldReturnTrue()
-    {
-        PersonalIdentificationNumber pin = new RomanianCnp(ValidRomanianCnp);
-        pin.EncodesDateOfBirth.Should().BeTrue();
-    }
-
-    [Fact]
-    public void EncodesDateOfBirth_ForMoldovanIdnp_ShouldReturnFalse()
-    {
-        PersonalIdentificationNumber pin = new MoldovanIdnp(ValidMoldovanIdnp);
-        pin.EncodesDateOfBirth.Should().BeFalse();
-    }
-
-    #endregion
-
-    #region ExtractGender Method
-
-    [Fact]
-    public void ExtractGender_ForRomanianCnp_ShouldReturnGender()
-    {
-        PersonalIdentificationNumber pin = new RomanianCnp(ValidRomanianCnp);
-        pin.ExtractGender().Should().Be(Gender.Male);
-    }
-
-    [Fact]
-    public void ExtractGender_ForMoldovanIdnp_ShouldReturnNull()
-    {
-        PersonalIdentificationNumber pin = new MoldovanIdnp(ValidMoldovanIdnp);
-        pin.ExtractGender().Should().BeNull();
-    }
-
-    #endregion
-
-    #region ExtractDateOfBirth Method
-
-    [Fact]
-    public void ExtractDateOfBirth_ForRomanianCnp_ShouldReturnDate()
-    {
-        PersonalIdentificationNumber pin = new RomanianCnp(ValidRomanianCnp);
-        var dob = pin.ExtractDateOfBirth();
-
-        dob.Should().NotBeNull();
-        dob!.Value.Should().Be(new DateTime(2002, 8, 13));
-    }
-
-    [Fact]
-    public void ExtractDateOfBirth_ForMoldovanIdnp_ShouldReturnNull()
-    {
-        PersonalIdentificationNumber pin = new MoldovanIdnp(ValidMoldovanIdnp);
-        pin.ExtractDateOfBirth().Should().BeNull();
-    }
-
-    #endregion
-
-    #region Implicit Conversion
-
-    [Fact]
-    public void ImplicitConversion_ToString_ShouldReturnValue()
-    {
-        PersonalIdentificationNumber pin = new RomanianCnp(ValidRomanianCnp);
-        string result = pin;
-        result.Should().Be(ValidRomanianCnp);
+        var idNumber = new IdentificationNumber(ValidMoldovanIdnp, IdentificationNumberType.MD);
+        idNumber.Type.Should().Be(IdentificationNumberType.MD);
     }
 
     #endregion
@@ -164,8 +109,8 @@ public class PersonalIdentificationNumberTests
     [Fact]
     public void ToString_ShouldReturnValue()
     {
-        PersonalIdentificationNumber pin = new RomanianCnp(ValidRomanianCnp);
-        pin.ToString().Should().Be(ValidRomanianCnp);
+        var idNumber = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
+        idNumber.ToString().Should().Be(ValidRomanianCnp);
     }
 
     #endregion
@@ -175,107 +120,56 @@ public class PersonalIdentificationNumberTests
     [Fact]
     public void Equals_WithSameValueAndType_ShouldBeEqual()
     {
-        PersonalIdentificationNumber pin1 = new RomanianCnp(ValidRomanianCnp);
-        PersonalIdentificationNumber pin2 = new RomanianCnp(ValidRomanianCnp);
+        var idNumber1 = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
+        var idNumber2 = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
 
-        pin1.Should().Be(pin2);
-        (pin1 == pin2).Should().BeTrue();
+        idNumber1.Should().Be(idNumber2);
+        (idNumber1 == idNumber2).Should().BeTrue();
     }
 
     [Fact]
-    public void Equals_WithDifferentTypes_ShouldNotBeEqual()
+    public void Equals_WithDifferentValues_ShouldNotBeEqual()
     {
-        // Even if we could somehow create a value that passes both validations,
-        // different types should not be equal
-        PersonalIdentificationNumber pin1 = new RomanianCnp(ValidRomanianCnp);
-        PersonalIdentificationNumber pin2 = new MoldovanIdnp(ValidMoldovanIdnp);
+        var idNumber1 = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
+        var idNumber2 = new IdentificationNumber(ValidMoldovanIdnp, IdentificationNumberType.MD);
 
-        pin1.Should().NotBe(pin2);
+        idNumber1.Should().NotBe(idNumber2);
+    }
+
+    [Fact]
+    public void Equals_WithSameValueButDifferentTypes_ShouldNotBeEqual()
+    {
+        var idNumber1 = new IdentificationNumber("1234567890123", IdentificationNumberType.RO);
+        var idNumber2 = new IdentificationNumber("1234567890123", IdentificationNumberType.MD);
+
+        idNumber1.Should().NotBe(idNumber2);
     }
 
     [Fact]
     public void GetHashCode_WithSameValueAndType_ShouldBeSame()
     {
-        PersonalIdentificationNumber pin1 = new RomanianCnp(ValidRomanianCnp);
-        PersonalIdentificationNumber pin2 = new RomanianCnp(ValidRomanianCnp);
+        var idNumber1 = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
+        var idNumber2 = new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO);
 
-        pin1.GetHashCode().Should().Be(pin2.GetHashCode());
+        idNumber1.GetHashCode().Should().Be(idNumber2.GetHashCode());
     }
 
     #endregion
 
-    #region Polymorphism Tests
+    #region Collection Tests
 
     [Fact]
     public void CanStoreInCollection_WithMixedTypes()
     {
-        var pins = new List<PersonalIdentificationNumber>
+        var idNumbers = new List<IdentificationNumber>
         {
-            new RomanianCnp(ValidRomanianCnp),
-            new MoldovanIdnp(ValidMoldovanIdnp)
+            new IdentificationNumber(ValidRomanianCnp, IdentificationNumberType.RO),
+            new IdentificationNumber(ValidMoldovanIdnp, IdentificationNumberType.MD)
         };
 
-        pins.Should().HaveCount(2);
-        pins[0].Type.Should().Be(IdentificationNumberType.RO);
-        pins[1].Type.Should().Be(IdentificationNumberType.MD);
-    }
-
-    [Fact]
-    public void CanIterateAndExtractInfo_WithMixedTypes()
-    {
-        var pins = new List<PersonalIdentificationNumber>
-        {
-            new RomanianCnp(ValidRomanianCnp),
-            new MoldovanIdnp(ValidMoldovanIdnp)
-        };
-
-        var results = pins.Select(p => new
-        {
-            p.Value,
-            p.Type,
-            p.EncodesGender,
-            p.EncodesDateOfBirth,
-            Gender = p.ExtractGender(),
-            DateOfBirth = p.ExtractDateOfBirth()
-        }).ToList();
-
-        // Romanian CNP
-        results[0].EncodesGender.Should().BeTrue();
-        results[0].EncodesDateOfBirth.Should().BeTrue();
-        results[0].Gender.Should().Be(Gender.Male);
-        results[0].DateOfBirth.Should().Be(new DateTime(2002, 8, 13));
-
-        // Moldovan IDNP
-        results[1].EncodesGender.Should().BeFalse();
-        results[1].EncodesDateOfBirth.Should().BeFalse();
-        results[1].Gender.Should().BeNull();
-        results[1].DateOfBirth.Should().BeNull();
-    }
-
-    #endregion
-
-    #region Factory Create vs Direct Constructor
-
-    [Fact]
-    public void Create_ShouldProduceSameResultAsDirectConstructor_ForRomanianCnp()
-    {
-        var fromFactory = PersonalIdentificationNumber.Create(ValidRomanianCnp, IdentificationNumberType.RO);
-        var fromConstructor = new RomanianCnp(ValidRomanianCnp);
-
-        fromFactory.Should().Be(fromConstructor);
-        fromFactory.Value.Should().Be(fromConstructor.Value);
-        fromFactory.Type.Should().Be(fromConstructor.Type);
-    }
-
-    [Fact]
-    public void Create_ShouldProduceSameResultAsDirectConstructor_ForMoldovanIdnp()
-    {
-        var fromFactory = PersonalIdentificationNumber.Create(ValidMoldovanIdnp, IdentificationNumberType.MD);
-        var fromConstructor = new MoldovanIdnp(ValidMoldovanIdnp);
-
-        fromFactory.Should().Be(fromConstructor);
-        fromFactory.Value.Should().Be(fromConstructor.Value);
-        fromFactory.Type.Should().Be(fromConstructor.Type);
+        idNumbers.Should().HaveCount(2);
+        idNumbers[0].Type.Should().Be(IdentificationNumberType.RO);
+        idNumbers[1].Type.Should().Be(IdentificationNumberType.MD);
     }
 
     #endregion

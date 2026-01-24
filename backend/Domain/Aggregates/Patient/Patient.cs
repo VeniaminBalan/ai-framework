@@ -12,14 +12,7 @@ public class Patient : AggregateRoot
     public string FirstName { get; private set; } = string.Empty;
     public string LastName { get; private set; } = string.Empty;
 
-    // EF-mapped state (Complex Type)
-    public IdentificationNumberData IdentificationNumberData { get; private set; } = null!;
-
-    // Domain-facing value object (NOT mapped by EF)
-    public IdentificationNumber IdentificationNumber =>
-        IdentificationNumber.Reconstruct(
-            IdentificationNumberData.Value,
-            IdentificationNumberData.Type);
+    public IdentificationNumber IdentificationNumber { get; private set; } = null!;
 
     public DateTime DateOfBirth { get; private set; }
     public Gender Gender { get; private set; }
@@ -76,6 +69,7 @@ public class Patient : AggregateRoot
         {
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
+            IdentificationNumber = identificationNumber,
             DateOfBirth = dateOfBirth.Date,
             Gender = gender,
             ExaminationFrequency = examinationFrequency,
@@ -85,8 +79,6 @@ public class Patient : AggregateRoot
             IsActive = true
         };
 
-        patient.SetIdentificationNumber(identificationNumber);
-
         // Calculate initial next examination date (from today if no last examination)
         patient.NextExaminationDate = examinationFrequency.CalculateNextExaminationDate(DateTime.Today);
 
@@ -94,18 +86,9 @@ public class Patient : AggregateRoot
             patient.ExternalId,
             patient.FirstName,
             patient.LastName,
-            patient.IdentificationNumberData.Value));
+            patient.IdentificationNumber.Value));
 
         return patient;
-    }
-
-    private void SetIdentificationNumber(IdentificationNumber identification)
-    {
-        IdentificationNumberData = new IdentificationNumberData
-        {
-            Value = identification.Value,
-            Type = identification.Type
-        };
     }
 
     public void UpdatePersonalInfo(string firstName, string lastName, DateTime dateOfBirth, Gender gender)
@@ -212,23 +195,5 @@ public class Patient : AggregateRoot
 
         if (string.IsNullOrWhiteSpace(lastName))
             throw new DomainException("Last name is required");
-
-        // Only validate DateOfBirth match if the identification number encodes it
-        if (identificationNumber.EncodesDateOfBirth)
-        {
-            var extractedDateOfBirth = identificationNumber.ExtractDateOfBirth();
-            if (extractedDateOfBirth.HasValue && extractedDateOfBirth.Value.Date != dateOfBirth.Date)
-                throw new DomainException(
-                    $"Date of birth ({dateOfBirth:yyyy-MM-dd}) does not match identification number ({extractedDateOfBirth.Value:yyyy-MM-dd})");
-        }
-
-        // Only validate Gender match if the identification number encodes it
-        if (identificationNumber.EncodesGender)
-        {
-            var extractedGender = identificationNumber.ExtractGender();
-            if (extractedGender.HasValue && extractedGender.Value != gender && extractedGender.Value != Gender.Other)
-                throw new DomainException(
-                    $"Gender ({gender}) does not match identification number ({extractedGender.Value})");
-        }
     }
 }

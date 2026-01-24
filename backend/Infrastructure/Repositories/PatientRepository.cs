@@ -25,7 +25,7 @@ public class PatientRepository : IPatientRepository
     public async Task<Patient?> GetByIdentificationNumberAsync(string identificationNumber)
     {
         return await _context.Patients
-            .FirstOrDefaultAsync(p => p.IdentificationNumberData.Value == identificationNumber);
+            .FirstOrDefaultAsync(p => p.IdentificationNumber.Value == identificationNumber);
     }
 
     public async Task<PagedResult<PatientListDto>> GetPagedAsync(PatientSearchParameters parameters)
@@ -39,7 +39,7 @@ public class PatientRepository : IPatientRepository
             query = query.Where(p =>
                 p.FirstName.ToLower().Contains(searchTerm) ||
                 p.LastName.ToLower().Contains(searchTerm) ||
-                p.IdentificationNumberData.Value.Contains(searchTerm));
+                p.IdentificationNumber.Value.Contains(searchTerm));
         }
 
         if (parameters.IsActive.HasValue)
@@ -64,8 +64,8 @@ public class PatientRepository : IPatientRepository
                 ? query.OrderByDescending(p => p.FirstName)
                 : query.OrderBy(p => p.FirstName),
             "identificationnumber" => parameters.SortDescending
-                ? query.OrderByDescending(p => p.IdentificationNumberData.Value)
-                : query.OrderBy(p => p.IdentificationNumberData.Value),
+                ? query.OrderByDescending(p => p.IdentificationNumber.Value)
+                : query.OrderBy(p => p.IdentificationNumber.Value),
             "nextexaminationdate" => parameters.SortDescending
                 ? query.OrderByDescending(p => p.NextExaminationDate)
                 : query.OrderBy(p => p.NextExaminationDate),
@@ -88,8 +88,8 @@ public class PatientRepository : IPatientRepository
                 FullName = p.FirstName + " " + p.LastName,
                 IdentificationNumber = new IdentificationNumberDto
                 {
-                    Value = p.IdentificationNumberData.Value,
-                    Type = p.IdentificationNumberData.Type
+                    Value = p.IdentificationNumber.Value,
+                    Type = p.IdentificationNumber.Type
                 },
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
@@ -127,8 +127,8 @@ public class PatientRepository : IPatientRepository
                 FullName = p.FirstName + " " + p.LastName,
                 IdentificationNumber = new IdentificationNumberDto
                 {
-                    Value = p.IdentificationNumberData.Value,
-                    Type = p.IdentificationNumberData.Type
+                    Value = p.IdentificationNumber.Value,
+                    Type = p.IdentificationNumber.Type
                 },
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
@@ -149,7 +149,7 @@ public class PatientRepository : IPatientRepository
     public async Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber)
     {
         return await _context.Patients
-            .AnyAsync(p => p.IdentificationNumberData.Value == identificationNumber);
+            .AnyAsync(p => p.IdentificationNumber.Value == identificationNumber);
     }
 
     public async Task AddAsync(Patient patient)
