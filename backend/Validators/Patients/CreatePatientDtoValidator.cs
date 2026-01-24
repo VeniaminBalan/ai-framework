@@ -1,6 +1,7 @@
 using FluentValidation;
 using PatientSyncHealth.Domain.Enums;
 using PatientSyncHealth.Domain.Interfaces;
+using PatientSyncHealth.DTOs.Common;
 using PatientSyncHealth.DTOs.Patients;
 using PatientSyncHealth.Validators.Common;
 using PatientSyncHealth.Validators.CustomValidators;
@@ -23,33 +24,23 @@ public class CreatePatientDtoValidator : AbstractValidator<CreatePatientDto>
             .NotEmpty().WithMessage("Last name is required")
             .MaximumLength(100).WithMessage("Last name cannot exceed 100 characters");
 
-        RuleFor(x => x.IdentificationNumberType)
-            .IsInEnum().WithMessage("Invalid identification number type");
-
         RuleFor(x => x.IdentificationNumber)
-            .NotEmpty().WithMessage("Identification number is required")
-            .Length(13).WithMessage("Identification number must be exactly 13 digits")
-            .Matches(@"^\d{13}$").WithMessage("Identification number must contain only digits")
-            .Must((dto, value) => IdentificationNumberValidator.IsValidFormat(value, dto.IdentificationNumberType))
-            .WithMessage((dto, _) => GetFormatErrorMessage(dto.IdentificationNumberType))
-            .Must((dto, value) => IdentificationNumberValidator.IsValidChecksum(value, dto.IdentificationNumberType))
-            .WithMessage((dto, _) => GetChecksumErrorMessage(dto.IdentificationNumberType))
-            .Must((dto, value) => IdentificationNumberValidator.IsValidStructure(value, dto.IdentificationNumberType))
-            .WithMessage((dto, _) => GetStructureErrorMessage(dto.IdentificationNumberType))
+            .NotNull().WithMessage("Identification number is required")
+            .SetValidator(new IdentificationNumberDtoValidator()!)
             .MustAsync(BeUniqueIdentificationNumber).WithMessage("A patient with this identification number already exists");
 
         RuleFor(x => x.DateOfBirth)
             .NotEmpty().WithMessage("Date of birth is required")
             .LessThan(DateTime.Today).WithMessage("Date of birth must be in the past")
-            .Must((dto, dob) => MatchesIdentificationNumberDateOfBirth(dto.IdentificationNumber, dto.IdentificationNumberType, dob))
+            .Must((dto, dob) => MatchesIdentificationNumberDateOfBirth(dto.IdentificationNumber, dob))
             .WithMessage("Date of birth does not match the identification number")
-            .When(dto => IdentificationNumberValidator.EncodesDateOfBirth(dto.IdentificationNumberType));
+            .When(dto => dto.IdentificationNumber != null && IdentificationNumberValidator.EncodesDateOfBirth(dto.IdentificationNumber.Type));
 
         RuleFor(x => x.Gender)
             .IsInEnum().WithMessage("Invalid gender value")
-            .Must((dto, gender) => MatchesIdentificationNumberGender(dto.IdentificationNumber, dto.IdentificationNumberType, gender))
+            .Must((dto, gender) => MatchesIdentificationNumberGender(dto.IdentificationNumber, gender))
             .WithMessage("Gender does not match the identification number")
-            .When(dto => IdentificationNumberValidator.EncodesGender(dto.IdentificationNumberType));
+            .When(dto => dto.IdentificationNumber != null && IdentificationNumberValidator.EncodesGender(dto.IdentificationNumber.Type));
 
         RuleFor(x => x.Email)
             .EmailAddress().WithMessage("Invalid email format")
@@ -69,60 +60,36 @@ public class CreatePatientDtoValidator : AbstractValidator<CreatePatientDto>
             .IsInEnum().WithMessage("Invalid examination frequency");
     }
 
-    private async Task<bool> BeUniqueIdentificationNumber(CreatePatientDto dto, string value, CancellationToken cancellationToken)
+    private async Task<bool> BeUniqueIdentificationNumber(CreatePatientDto dto, IdentificationNumberDto idNumber, CancellationToken cancellationToken)
     {
-        if (!IdentificationNumberValidator.IsValidFormat(value, dto.IdentificationNumberType))
+        if (idNumber == null || !IdentificationNumberValidator.IsValidFormat(idNumber.Value, idNumber.Type))
             return true; // Let other validators handle format issues
 
-        return !await _patientRepository.ExistsByIdentificationNumberAsync(value);
+        return !await _patientRepository.ExistsByIdentificationNumberAsync(idNumber.Value);
     }
 
-    private static bool MatchesIdentificationNumberDateOfBirth(string value, IdentificationNumberType type, DateTime dateOfBirth)
+    private static bool MatchesIdentificationNumberDateOfBirth(IdentificationNumberDto? idNumber, DateTime dateOfBirth)
     {
-        var extractedDob = IdentificationNumberValidator.ExtractDateOfBirth(value, type);
+        if (idNumber == null)
+            return true;
+
+        var extractedDob = IdentificationNumberValidator.ExtractDateOfBirth(idNumber.Value, idNumber.Type);
         if (extractedDob == null)
             return true; // Let other validators handle format issues or type doesn't encode DOB
 
         return extractedDob.Value.Date == dateOfBirth.Date;
     }
 
-    private static bool MatchesIdentificationNumberGender(string value, IdentificationNumberType type, Gender gender)
+    private static bool MatchesIdentificationNumberGender(IdentificationNumberDto? idNumber, Gender gender)
     {
-        var extractedGender = IdentificationNumberValidator.ExtractGender(value, type);
+        if (idNumber == null)
+            return true;
+
+        var extractedGender = IdentificationNumberValidator.ExtractGender(idNumber.Value, idNumber.Type);
         if (extractedGender == null)
             return true; // Let other validators handle format issues or type doesn't encode gender
 
         // Allow if extracted indicates "Other" or if genders match
         return extractedGender == Gender.Other || extractedGender == gender;
-    }
-
-    private static string GetFormatErrorMessage(IdentificationNumberType type)
-    {
-        return type switch
-        {
-            IdentificationNumberType.RO => "Invalid Romanian CNP format",
-            IdentificationNumberType.MD => "Invalid Moldovan IDNP format. IDNP must start with '2'",
-            _ => "Invalid identification number format"
-        };
-    }
-
-    private static string GetChecksumErrorMessage(IdentificationNumberType type)
-    {
-        return type switch
-        {
-            IdentificationNumberType.RO => "CNP has invalid checksum",
-            IdentificationNumberType.MD => "IDNP has invalid checksum",
-            _ => "Identification number has invalid checksum"
-        };
-    }
-
-    private static string GetStructureErrorMessage(IdentificationNumberType type)
-    {
-        return type switch
-        {
-            IdentificationNumberType.RO => "CNP contains invalid date or county code",
-            IdentificationNumberType.MD => "IDNP has invalid structure",
-            _ => "Identification number has invalid structure"
-        };
     }
 }

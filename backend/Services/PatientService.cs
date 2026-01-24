@@ -66,7 +66,7 @@ public class PatientService : IPatientService
     public async Task<PatientDto> CreatePatientAsync(CreatePatientDto dto)
     {
         _logger.LogInformation("Creating patient with identification number {IdNumber} (type: {IdType})",
-            MaskIdentificationNumber(dto.IdentificationNumber), dto.IdentificationNumberType);
+            MaskIdentificationNumber(dto.IdentificationNumber.Value), dto.IdentificationNumber.Type);
 
         // Validate with FluentValidation (includes checksum and uniqueness check)
         var validationResult = await _createValidator.ValidateAsync(dto);
@@ -78,8 +78,7 @@ public class PatientService : IPatientService
         }
 
         // Create value objects
-        var identificationNumber = PersonalIdentificationNumber.Create(
-            dto.IdentificationNumber, dto.IdentificationNumberType);
+        var identificationNumber = dto.IdentificationNumber.ToValueObject();
         var email = !string.IsNullOrWhiteSpace(dto.Email) ? new Email(dto.Email) : null;
         var phone = !string.IsNullOrWhiteSpace(dto.Phone) ? new PhoneNumber(dto.Phone) : null;
         var address = dto.Address?.ToValueObject();

@@ -88,8 +88,11 @@ public class PatientRepository : IPatientRepository
             {
                 Id = p.ExternalId,
                 FullName = p.FirstName + " " + p.LastName,
-                IdentificationNumber = EF.Property<string>(p, "_identificationNumberValue"),
-                IdentificationNumberType = EF.Property<IdentificationNumberType>(p, "_identificationNumberType"),
+                IdentificationNumber = new IdentificationNumberDto
+                {
+                    Value = EF.Property<string>(p, "_identificationNumberValue"),
+                    Type = EF.Property<IdentificationNumberType>(p, "_identificationNumberType")
+                },
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
                 Phone = p.Phone != null ? p.Phone.Value : null,
@@ -124,8 +127,11 @@ public class PatientRepository : IPatientRepository
             {
                 Id = p.ExternalId,
                 FullName = p.FirstName + " " + p.LastName,
-                IdentificationNumber = EF.Property<string>(p, "_identificationNumberValue"),
-                IdentificationNumberType = EF.Property<IdentificationNumberType>(p, "_identificationNumberType"),
+                IdentificationNumber = new IdentificationNumberDto
+                {
+                    Value = EF.Property<string>(p, "_identificationNumberValue"),
+                    Type = EF.Property<IdentificationNumberType>(p, "_identificationNumberType")
+                },
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
                 Phone = p.Phone != null ? p.Phone.Value : null,

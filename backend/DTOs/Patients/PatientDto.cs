@@ -11,8 +11,7 @@ public record PatientDto
     public required string FirstName { get; init; }
     public required string LastName { get; init; }
     public required string FullName { get; init; }
-    public required string IdentificationNumber { get; init; }
-    public required IdentificationNumberType IdentificationNumberType { get; init; }
+    public required IdentificationNumberDto IdentificationNumber { get; init; }
     public required DateTime DateOfBirth { get; init; }
     public required int Age { get; init; }
     public required Gender Gender { get; init; }
