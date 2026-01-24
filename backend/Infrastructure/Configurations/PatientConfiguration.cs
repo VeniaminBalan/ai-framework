@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PatientSyncHealth.Domain.Aggregates.Patient;
 using PatientSyncHealth.Domain.Enums;
+using PatientSyncHealth.Domain.ValueObjects;
 
 namespace PatientSyncHealth.Infrastructure.Configurations;
 
@@ -42,16 +43,22 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
             .HasConversion<string>()
             .HasMaxLength(20);
 
-        // CNP Value Object - owned type
-        builder.OwnsOne(p => p.Cnp, cnp =>
-        {
-            cnp.Property(c => c.Value)
-                .HasColumnName("Cnp")
-                .IsRequired()
-                .HasMaxLength(13);
+        // Personal Identification Number - stored via backing fields
+        builder.Property<string>("_identificationNumberValue")
+            .HasColumnName("IdentificationNumber")
+            .IsRequired()
+            .HasMaxLength(13);
 
-            cnp.HasIndex(c => c.Value).IsUnique();
-        });
+        builder.Property<IdentificationNumberType>("_identificationNumberType")
+            .HasColumnName("IdentificationNumberType")
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(5);
+
+        builder.HasIndex("_identificationNumberValue").IsUnique();
+
+        // Ignore the computed property - EF uses the backing fields
+        builder.Ignore(p => p.IdentificationNumber);
 
         // Email Value Object - owned type (optional)
         builder.OwnsOne(p => p.Email, email =>

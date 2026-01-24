@@ -65,9 +65,10 @@ public class PatientService : IPatientService
     /// <inheritdoc />
     public async Task<PatientDto> CreatePatientAsync(CreatePatientDto dto)
     {
-        _logger.LogInformation("Creating patient with CNP {Cnp}", MaskCnp(dto.Cnp));
+        _logger.LogInformation("Creating patient with identification number {IdNumber} (type: {IdType})",
+            MaskIdentificationNumber(dto.IdentificationNumber), dto.IdentificationNumberType);
 
-        // Validate with FluentValidation (includes CNP checksum and uniqueness check)
+        // Validate with FluentValidation (includes checksum and uniqueness check)
         var validationResult = await _createValidator.ValidateAsync(dto);
         if (!validationResult.IsValid)
         {
@@ -77,7 +78,8 @@ public class PatientService : IPatientService
         }
 
         // Create value objects
-        var cnp = new Cnp(dto.Cnp);
+        var identificationNumber = PersonalIdentificationNumber.Create(
+            dto.IdentificationNumber, dto.IdentificationNumberType);
         var email = !string.IsNullOrWhiteSpace(dto.Email) ? new Email(dto.Email) : null;
         var phone = !string.IsNullOrWhiteSpace(dto.Phone) ? new PhoneNumber(dto.Phone) : null;
         var address = dto.Address?.ToValueObject();
@@ -86,7 +88,7 @@ public class PatientService : IPatientService
         var patient = Patient.Create(
             dto.FirstName,
             dto.LastName,
-            cnp,
+            identificationNumber,
             dto.DateOfBirth,
             dto.Gender,
             dto.ExaminationFrequency,
@@ -232,11 +234,11 @@ public class PatientService : IPatientService
             patient.NextExaminationDate?.ToShortDateString());
     }
 
-    private static string MaskCnp(string cnp)
+    private static string MaskIdentificationNumber(string value)
     {
-        if (string.IsNullOrWhiteSpace(cnp) || cnp.Length < 6)
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 6)
             return "***";
 
-        return $"{cnp[..3]}****{cnp[^3..]}";
+        return $"{value[..3]}****{value[^3..]}";
     }
 }

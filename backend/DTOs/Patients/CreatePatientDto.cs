@@ -15,9 +15,12 @@ public record CreatePatientDto
     public required string LastName { get; init; }
 
     [Required]
-    [StringLength(13, MinimumLength = 13, ErrorMessage = "CNP must be exactly 13 digits")]
-    [RegularExpression(@"^\d{13}$", ErrorMessage = "CNP must contain only digits")]
-    public required string Cnp { get; init; }
+    [StringLength(13, MinimumLength = 13, ErrorMessage = "Identification number must be exactly 13 digits")]
+    [RegularExpression(@"^\d{13}$", ErrorMessage = "Identification number must contain only digits")]
+    public required string IdentificationNumber { get; init; }
+
+    [Required]
+    public required IdentificationNumberType IdentificationNumberType { get; init; }
 
     [Required]
     public required DateTime DateOfBirth { get; init; }

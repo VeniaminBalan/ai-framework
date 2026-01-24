@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PatientSyncHealth.Domain.Aggregates.Patient;
+using PatientSyncHealth.Domain.Enums;
 using PatientSyncHealth.Domain.Interfaces;
 using PatientSyncHealth.DTOs.Common;
 using PatientSyncHealth.DTOs.Patients;
@@ -22,10 +23,10 @@ public class PatientRepository : IPatientRepository
             .FirstOrDefaultAsync(p => p.ExternalId == externalId);
     }
 
-    public async Task<Patient?> GetByCnpAsync(string cnp)
+    public async Task<Patient?> GetByIdentificationNumberAsync(string identificationNumber)
     {
         return await _context.Patients
-            .FirstOrDefaultAsync(p => p.Cnp.Value == cnp);
+            .FirstOrDefaultAsync(p => EF.Property<string>(p, "_identificationNumberValue") == identificationNumber);
     }
 
     public async Task<PagedResult<PatientListDto>> GetPagedAsync(PatientSearchParameters parameters)
@@ -39,7 +40,7 @@ public class PatientRepository : IPatientRepository
             query = query.Where(p =>
                 p.FirstName.ToLower().Contains(searchTerm) ||
                 p.LastName.ToLower().Contains(searchTerm) ||
-                p.Cnp.Value.Contains(searchTerm));
+                EF.Property<string>(p, "_identificationNumberValue").Contains(searchTerm));
         }
 
         if (parameters.IsActive.HasValue)
@@ -63,9 +64,9 @@ public class PatientRepository : IPatientRepository
             "firstname" => parameters.SortDescending
                 ? query.OrderByDescending(p => p.FirstName)
                 : query.OrderBy(p => p.FirstName),
-            "cnp" => parameters.SortDescending
-                ? query.OrderByDescending(p => p.Cnp.Value)
-                : query.OrderBy(p => p.Cnp.Value),
+            "identificationnumber" => parameters.SortDescending
+                ? query.OrderByDescending(p => EF.Property<string>(p, "_identificationNumberValue"))
+                : query.OrderBy(p => EF.Property<string>(p, "_identificationNumberValue")),
             "nextexaminationdate" => parameters.SortDescending
                 ? query.OrderByDescending(p => p.NextExaminationDate)
                 : query.OrderBy(p => p.NextExaminationDate),
@@ -87,7 +88,8 @@ public class PatientRepository : IPatientRepository
             {
                 Id = p.ExternalId,
                 FullName = p.FirstName + " " + p.LastName,
-                Cnp = p.Cnp.Value,
+                IdentificationNumber = EF.Property<string>(p, "_identificationNumberValue"),
+                IdentificationNumberType = EF.Property<IdentificationNumberType>(p, "_identificationNumberType"),
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
                 Phone = p.Phone != null ? p.Phone.Value : null,
@@ -122,7 +124,8 @@ public class PatientRepository : IPatientRepository
             {
                 Id = p.ExternalId,
                 FullName = p.FirstName + " " + p.LastName,
-                Cnp = p.Cnp.Value,
+                IdentificationNumber = EF.Property<string>(p, "_identificationNumberValue"),
+                IdentificationNumberType = EF.Property<IdentificationNumberType>(p, "_identificationNumberType"),
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
                 Phone = p.Phone != null ? p.Phone.Value : null,
@@ -139,10 +142,10 @@ public class PatientRepository : IPatientRepository
             .AnyAsync(p => p.ExternalId == externalId);
     }
 
-    public async Task<bool> ExistsByCnpAsync(string cnp)
+    public async Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber)
     {
         return await _context.Patients
-            .AnyAsync(p => p.Cnp.Value == cnp);
+            .AnyAsync(p => EF.Property<string>(p, "_identificationNumberValue") == identificationNumber);
     }
 
     public async Task AddAsync(Patient patient)

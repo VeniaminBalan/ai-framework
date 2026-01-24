@@ -8,7 +8,7 @@ public interface IPatientRepository
 {
     // Single entity queries (may return tracked entity for updates)
     Task<Patient?> GetByIdAsync(string externalId);
-    Task<Patient?> GetByCnpAsync(string cnp);
+    Task<Patient?> GetByIdentificationNumberAsync(string identificationNumber);
 
     // Collection queries (use explicit projection to DTOs)
     Task<PagedResult<PatientListDto>> GetPagedAsync(PatientSearchParameters parameters);
@@ -16,7 +16,7 @@ public interface IPatientRepository
 
     // Existence checks
     Task<bool> ExistsAsync(string externalId);
-    Task<bool> ExistsByCnpAsync(string cnp);
+    Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber);
 
     // Commands
     Task AddAsync(Patient patient);

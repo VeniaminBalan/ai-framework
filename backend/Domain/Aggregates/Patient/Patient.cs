@@ -8,10 +8,27 @@ namespace PatientSyncHealth.Domain.Aggregates.Patient;
 
 public class Patient : AggregateRoot
 {
+    // Backing fields for EF Core mapping
+    private string _identificationNumberValue = string.Empty;
+    private IdentificationNumberType _identificationNumberType;
+    private PersonalIdentificationNumber? _identificationNumber;
+
     // Personal Information
     public string FirstName { get; private set; } = string.Empty;
     public string LastName { get; private set; } = string.Empty;
-    public Cnp Cnp { get; private set; } = null!;
+
+    public PersonalIdentificationNumber IdentificationNumber
+    {
+        get => _identificationNumber ??= PersonalIdentificationNumber.Reconstruct(
+            _identificationNumberValue, _identificationNumberType);
+        private set
+        {
+            _identificationNumber = value;
+            _identificationNumberValue = value.Value;
+            _identificationNumberType = value.Type;
+        }
+    }
+
     public DateTime DateOfBirth { get; private set; }
     public Gender Gender { get; private set; }
 
@@ -53,7 +70,7 @@ public class Patient : AggregateRoot
     public static Patient Create(
         string firstName,
         string lastName,
-        Cnp cnp,
+        PersonalIdentificationNumber identificationNumber,
         DateTime dateOfBirth,
         Gender gender,
         ExaminationFrequency examinationFrequency,
@@ -61,13 +78,13 @@ public class Patient : AggregateRoot
         PhoneNumber? phone = null,
         Address? address = null)
     {
-        ValidatePersonalInfo(firstName, lastName, cnp, dateOfBirth, gender);
+        ValidatePersonalInfo(firstName, lastName, identificationNumber, dateOfBirth, gender);
 
         var patient = new Patient
         {
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
-            Cnp = cnp,
+            IdentificationNumber = identificationNumber,
             DateOfBirth = dateOfBirth.Date,
             Gender = gender,
             ExaminationFrequency = examinationFrequency,
@@ -84,7 +101,7 @@ public class Patient : AggregateRoot
             patient.ExternalId,
             patient.FirstName,
             patient.LastName,
-            patient.Cnp.Value));
+            patient.IdentificationNumber.Value));
 
         return patient;
     }
@@ -181,7 +198,12 @@ public class Patient : AggregateRoot
             throw new DomainException("Cannot modify an inactive patient");
     }
 
-    private static void ValidatePersonalInfo(string firstName, string lastName, Cnp cnp, DateTime dateOfBirth, Gender gender)
+    private static void ValidatePersonalInfo(
+        string firstName,
+        string lastName,
+        PersonalIdentificationNumber identificationNumber,
+        DateTime dateOfBirth,
+        Gender gender)
     {
         if (string.IsNullOrWhiteSpace(firstName))
             throw new DomainException("First name is required");
@@ -189,14 +211,22 @@ public class Patient : AggregateRoot
         if (string.IsNullOrWhiteSpace(lastName))
             throw new DomainException("Last name is required");
 
-        // Validate that DateOfBirth matches CNP
-        var cnpDateOfBirth = cnp.ExtractDateOfBirth();
-        if (cnpDateOfBirth.Date != dateOfBirth.Date)
-            throw new DomainException($"Date of birth ({dateOfBirth:yyyy-MM-dd}) does not match CNP ({cnpDateOfBirth:yyyy-MM-dd})");
+        // Only validate DateOfBirth match if the identification number encodes it
+        if (identificationNumber.EncodesDateOfBirth)
+        {
+            var extractedDateOfBirth = identificationNumber.ExtractDateOfBirth();
+            if (extractedDateOfBirth.HasValue && extractedDateOfBirth.Value.Date != dateOfBirth.Date)
+                throw new DomainException(
+                    $"Date of birth ({dateOfBirth:yyyy-MM-dd}) does not match identification number ({extractedDateOfBirth.Value:yyyy-MM-dd})");
+        }
 
-        // Validate that Gender matches CNP
-        var cnpGender = cnp.ExtractGender();
-        if (cnpGender != gender && cnpGender != Gender.Other)
-            throw new DomainException($"Gender ({gender}) does not match CNP ({cnpGender})");
+        // Only validate Gender match if the identification number encodes it
+        if (identificationNumber.EncodesGender)
+        {
+            var extractedGender = identificationNumber.ExtractGender();
+            if (extractedGender.HasValue && extractedGender.Value != gender && extractedGender.Value != Gender.Other)
+                throw new DomainException(
+                    $"Gender ({gender}) does not match identification number ({extractedGender.Value})");
+        }
     }
 }
