@@ -40,6 +40,7 @@ Design and implement domain models using Domain-Driven Design tactical patterns.
 - Use ubiquitous language from the domain
 - Value objects are immutable
 - Entities encapsulate their own invariants
+- **Don't overcomplicate**: Apply DDD patterns pragmatically - simple concepts don't need complex domain models
 
 ## Quality Checklist
 
