@@ -48,8 +48,8 @@ public class CreatePatientDtoValidator : AbstractValidator<CreatePatientDto>
             .When(x => !string.IsNullOrWhiteSpace(x.Email));
 
         RuleFor(x => x.Phone)
-            .Matches(@"^(\+40|0)[2-9]\d{8}$|^(\+373|0)[0-9]\d{7}$")
-            .WithMessage("Invalid phone number format. Expected Romanian (+40xxxxxxxxx or 0xxxxxxxxx) or Moldovan (+373xxxxxxxx or 0xxxxxxxx)")
+            .Matches(@"^\+[1-9]\d{6,14}$")
+            .WithMessage("Invalid phone number format. Expected E.164 format: +[country code][number] (e.g., +40712345678)")
             .When(x => !string.IsNullOrWhiteSpace(x.Phone));
 
         RuleFor(x => x.Address)

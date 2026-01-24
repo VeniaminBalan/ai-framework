@@ -17,7 +17,7 @@ public static class PatientMappingExtensions
             FirstName = patient.FirstName,
             LastName = patient.LastName,
             FullName = patient.FullName,
-            IdentificationNumber = patient.IdentificationNumber.ToDto(),
+            IdentificationNumber = patient.IdentificationNumberData.ToDto(),
             DateOfBirth = patient.DateOfBirth,
             Age = patient.Age,
             Gender = patient.Gender,
@@ -44,7 +44,7 @@ public static class PatientMappingExtensions
         {
             Id = patient.ExternalId,
             FullName = patient.FullName,
-            IdentificationNumber = patient.IdentificationNumber.ToDto(),
+            IdentificationNumber = patient.IdentificationNumberData.ToDto(),
             Age = patient.Age,
             Phone = patient.Phone?.Value,
             NextExaminationDate = patient.NextExaminationDate,
@@ -53,22 +53,22 @@ public static class PatientMappingExtensions
         };
     }
 
-    public static IdentificationNumberDto ToDto(this PersonalIdentificationNumber pin)
+    public static IdentificationNumberDto ToDto(this IdentificationNumberData data)
     {
-        ArgumentNullException.ThrowIfNull(pin);
+        ArgumentNullException.ThrowIfNull(data);
 
         return new IdentificationNumberDto
         {
-            Value = pin.Value,
-            Type = pin.Type
+            Value = data.Value,
+            Type = data.Type
         };
     }
 
-    public static PersonalIdentificationNumber ToValueObject(this IdentificationNumberDto dto)
+    public static IdentificationNumber ToValueObject(this IdentificationNumberDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        return PersonalIdentificationNumber.Create(dto.Value, dto.Type);
+        return IdentificationNumber.Create(dto.Value, dto.Type);
     }
 
     public static AddressDto? ToDto(this Address? address)

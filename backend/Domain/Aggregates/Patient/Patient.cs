@@ -8,26 +8,18 @@ namespace PatientSyncHealth.Domain.Aggregates.Patient;
 
 public class Patient : AggregateRoot
 {
-    // Backing fields for EF Core mapping
-    private string _identificationNumberValue = string.Empty;
-    private IdentificationNumberType _identificationNumberType;
-    private PersonalIdentificationNumber? _identificationNumber;
-
     // Personal Information
     public string FirstName { get; private set; } = string.Empty;
     public string LastName { get; private set; } = string.Empty;
 
-    public PersonalIdentificationNumber IdentificationNumber
-    {
-        get => _identificationNumber ??= PersonalIdentificationNumber.Reconstruct(
-            _identificationNumberValue, _identificationNumberType);
-        private set
-        {
-            _identificationNumber = value;
-            _identificationNumberValue = value.Value;
-            _identificationNumberType = value.Type;
-        }
-    }
+    // EF-mapped state (Complex Type)
+    public IdentificationNumberData IdentificationNumberData { get; private set; } = null!;
+
+    // Domain-facing value object (NOT mapped by EF)
+    public IdentificationNumber IdentificationNumber =>
+        IdentificationNumber.Reconstruct(
+            IdentificationNumberData.Value,
+            IdentificationNumberData.Type);
 
     public DateTime DateOfBirth { get; private set; }
     public Gender Gender { get; private set; }
@@ -70,7 +62,7 @@ public class Patient : AggregateRoot
     public static Patient Create(
         string firstName,
         string lastName,
-        PersonalIdentificationNumber identificationNumber,
+        IdentificationNumber identificationNumber,
         DateTime dateOfBirth,
         Gender gender,
         ExaminationFrequency examinationFrequency,
@@ -84,7 +76,6 @@ public class Patient : AggregateRoot
         {
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
-            IdentificationNumber = identificationNumber,
             DateOfBirth = dateOfBirth.Date,
             Gender = gender,
             ExaminationFrequency = examinationFrequency,
@@ -94,6 +85,8 @@ public class Patient : AggregateRoot
             IsActive = true
         };
 
+        patient.SetIdentificationNumber(identificationNumber);
+
         // Calculate initial next examination date (from today if no last examination)
         patient.NextExaminationDate = examinationFrequency.CalculateNextExaminationDate(DateTime.Today);
 
@@ -101,9 +94,18 @@ public class Patient : AggregateRoot
             patient.ExternalId,
             patient.FirstName,
             patient.LastName,
-            patient.IdentificationNumber.Value));
+            patient.IdentificationNumberData.Value));
 
         return patient;
+    }
+
+    private void SetIdentificationNumber(IdentificationNumber identification)
+    {
+        IdentificationNumberData = new IdentificationNumberData
+        {
+            Value = identification.Value,
+            Type = identification.Type
+        };
     }
 
     public void UpdatePersonalInfo(string firstName, string lastName, DateTime dateOfBirth, Gender gender)
@@ -201,7 +203,7 @@ public class Patient : AggregateRoot
     private static void ValidatePersonalInfo(
         string firstName,
         string lastName,
-        PersonalIdentificationNumber identificationNumber,
+        IdentificationNumber identificationNumber,
         DateTime dateOfBirth,
         Gender gender)
     {

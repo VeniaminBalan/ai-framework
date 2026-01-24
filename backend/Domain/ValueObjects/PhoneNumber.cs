@@ -5,9 +5,9 @@ using PatientSyncHealth.Domain.Exceptions;
 namespace PatientSyncHealth.Domain.ValueObjects;
 
 /// <summary>
-/// Romanian phone number value object.
-/// Accepts formats: +40xxxxxxxxx, 0xxxxxxxxx
-/// Stores in normalized format: +40xxxxxxxxx
+/// International phone number value object using E.164 standard.
+/// Format: +[country code][subscriber number] (7-15 digits after +)
+/// Examples: +40712345678 (Romania), +37360123456 (Moldova), +14155551234 (USA)
 /// </summary>
 public partial class PhoneNumber : ValueObject
 {
@@ -22,32 +22,14 @@ public partial class PhoneNumber : ValueObject
 
         value = value.Trim().Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "");
 
-        if (!IsValidRomanianPhoneNumber(value))
-            throw new DomainException("Invalid Romanian phone number format. Expected +40xxxxxxxxx or 0xxxxxxxxx");
+        if (!E164PhoneRegex().IsMatch(value))
+            throw new DomainException("Invalid phone number format. Expected E.164 format: +[country code][number] (e.g., +40712345678)");
 
-        Value = NormalizePhoneNumber(value);
+        Value = value;
     }
 
-    private static bool IsValidRomanianPhoneNumber(string phone)
-    {
-        // Romanian mobile: +407xxxxxxxx or 07xxxxxxxx
-        // Romanian landline: +402xxxxxxxx or 02xxxxxxxx, +403xxxxxxxx or 03xxxxxxxx
-        return RomanianPhoneRegex().IsMatch(phone);
-    }
-
-    private static string NormalizePhoneNumber(string phone)
-    {
-        if (phone.StartsWith("+40"))
-            return phone;
-
-        if (phone.StartsWith("0"))
-            return "+4" + phone;
-
-        return phone;
-    }
-
-    [GeneratedRegex(@"^(\+40|0)[2-9]\d{8}$")]
-    private static partial Regex RomanianPhoneRegex();
+    [GeneratedRegex(@"^\+[1-9]\d{6,14}$")]
+    private static partial Regex E164PhoneRegex();
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

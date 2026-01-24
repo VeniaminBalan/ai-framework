@@ -8,7 +8,7 @@ namespace PatientSyncHealth.Domain.ValueObjects;
 /// Abstract base class for personal identification numbers across different countries.
 /// Each country has its own validation rules and data extraction capabilities.
 /// </summary>
-public abstract class PersonalIdentificationNumber : ValueObject
+public abstract class IdentificationNumber : ValueObject
 {
     /// <summary>
     /// The raw identification number value.
@@ -20,7 +20,7 @@ public abstract class PersonalIdentificationNumber : ValueObject
     /// </summary>
     public abstract IdentificationNumberType Type { get; }
 
-    protected PersonalIdentificationNumber() { } // EF Core
+    protected IdentificationNumber() { } // EF Core
 
     /// <summary>
     /// Validates the identification number format and structure.
@@ -53,7 +53,7 @@ public abstract class PersonalIdentificationNumber : ValueObject
     /// <summary>
     /// Factory method to create the appropriate identification number instance based on type.
     /// </summary>
-    public static PersonalIdentificationNumber Create(string value, IdentificationNumberType type)
+    public static IdentificationNumber Create(string value, IdentificationNumberType type)
     {
         return type switch
         {
@@ -64,10 +64,10 @@ public abstract class PersonalIdentificationNumber : ValueObject
     }
 
     /// <summary>
-    /// Reconstructs a PersonalIdentificationNumber from stored values (for EF Core).
+    /// Reconstructs a IdentificationNumber from stored values (for EF Core).
     /// Does not re-validate since the data was validated when originally stored.
     /// </summary>
-    internal static PersonalIdentificationNumber Reconstruct(string value, IdentificationNumberType type)
+    internal static IdentificationNumber Reconstruct(string value, IdentificationNumberType type)
     {
         return type switch
         {
@@ -83,7 +83,7 @@ public abstract class PersonalIdentificationNumber : ValueObject
         yield return Type;
     }
 
-    public static implicit operator string(PersonalIdentificationNumber pin) => pin.Value;
+    public static implicit operator string(IdentificationNumber pin) => pin.Value;
 
     public override string ToString() => Value;
 }

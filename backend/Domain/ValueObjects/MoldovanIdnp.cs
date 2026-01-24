@@ -14,7 +14,7 @@ namespace PatientSyncHealth.Domain.ValueObjects;
 ///
 /// Note: Unlike Romanian CNP, Moldovan IDNP does NOT encode gender or date of birth.
 /// </summary>
-public sealed class MoldovanIdnp : PersonalIdentificationNumber
+public sealed class MoldovanIdnp : IdentificationNumber
 {
     private static readonly int[] ChecksumWeights = [7, 3, 1, 7, 3, 1, 7, 3, 1, 7, 3, 1];
 

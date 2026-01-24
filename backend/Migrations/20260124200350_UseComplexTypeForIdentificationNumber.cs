@@ -4,10 +4,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace PatientSyncHealth.Infrastructure.Migrations
+namespace PatientSyncHealth.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class UseComplexTypeForIdentificationNumber : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -50,12 +50,6 @@ namespace PatientSyncHealth.Infrastructure.Migrations
                 name: "IX_Patients_ExternalId",
                 table: "Patients",
                 column: "ExternalId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Patients_IdentificationNumber",
-                table: "Patients",
-                column: "IdentificationNumber",
                 unique: true);
 
             migrationBuilder.CreateIndex(

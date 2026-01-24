@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using PatientSyncHealth.Domain.Aggregates.Patient;
-using PatientSyncHealth.Domain.Enums;
 using PatientSyncHealth.Domain.Interfaces;
 using PatientSyncHealth.DTOs.Common;
 using PatientSyncHealth.DTOs.Patients;
@@ -26,7 +25,7 @@ public class PatientRepository : IPatientRepository
     public async Task<Patient?> GetByIdentificationNumberAsync(string identificationNumber)
     {
         return await _context.Patients
-            .FirstOrDefaultAsync(p => EF.Property<string>(p, "_identificationNumberValue") == identificationNumber);
+            .FirstOrDefaultAsync(p => p.IdentificationNumberData.Value == identificationNumber);
     }
 
     public async Task<PagedResult<PatientListDto>> GetPagedAsync(PatientSearchParameters parameters)
@@ -40,7 +39,7 @@ public class PatientRepository : IPatientRepository
             query = query.Where(p =>
                 p.FirstName.ToLower().Contains(searchTerm) ||
                 p.LastName.ToLower().Contains(searchTerm) ||
-                EF.Property<string>(p, "_identificationNumberValue").Contains(searchTerm));
+                p.IdentificationNumberData.Value.Contains(searchTerm));
         }
 
         if (parameters.IsActive.HasValue)
@@ -65,8 +64,8 @@ public class PatientRepository : IPatientRepository
                 ? query.OrderByDescending(p => p.FirstName)
                 : query.OrderBy(p => p.FirstName),
             "identificationnumber" => parameters.SortDescending
-                ? query.OrderByDescending(p => EF.Property<string>(p, "_identificationNumberValue"))
-                : query.OrderBy(p => EF.Property<string>(p, "_identificationNumberValue")),
+                ? query.OrderByDescending(p => p.IdentificationNumberData.Value)
+                : query.OrderBy(p => p.IdentificationNumberData.Value),
             "nextexaminationdate" => parameters.SortDescending
                 ? query.OrderByDescending(p => p.NextExaminationDate)
                 : query.OrderBy(p => p.NextExaminationDate),
@@ -80,7 +79,6 @@ public class PatientRepository : IPatientRepository
 
         var totalCount = await query.CountAsync();
 
-        // Project to DTO with explicit Select
         var items = await query
             .Skip((parameters.PageNumber - 1) * parameters.PageSize)
             .Take(parameters.PageSize)
@@ -90,8 +88,8 @@ public class PatientRepository : IPatientRepository
                 FullName = p.FirstName + " " + p.LastName,
                 IdentificationNumber = new IdentificationNumberDto
                 {
-                    Value = EF.Property<string>(p, "_identificationNumberValue"),
-                    Type = EF.Property<IdentificationNumberType>(p, "_identificationNumberType")
+                    Value = p.IdentificationNumberData.Value,
+                    Type = p.IdentificationNumberData.Type
                 },
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
@@ -129,8 +127,8 @@ public class PatientRepository : IPatientRepository
                 FullName = p.FirstName + " " + p.LastName,
                 IdentificationNumber = new IdentificationNumberDto
                 {
-                    Value = EF.Property<string>(p, "_identificationNumberValue"),
-                    Type = EF.Property<IdentificationNumberType>(p, "_identificationNumberType")
+                    Value = p.IdentificationNumberData.Value,
+                    Type = p.IdentificationNumberData.Type
                 },
                 Age = today.Year - p.DateOfBirth.Year -
                     (p.DateOfBirth.Date > today.AddYears(-(today.Year - p.DateOfBirth.Year)) ? 1 : 0),
@@ -151,7 +149,7 @@ public class PatientRepository : IPatientRepository
     public async Task<bool> ExistsByIdentificationNumberAsync(string identificationNumber)
     {
         return await _context.Patients
-            .AnyAsync(p => EF.Property<string>(p, "_identificationNumberValue") == identificationNumber);
+            .AnyAsync(p => p.IdentificationNumberData.Value == identificationNumber);
     }
 
     public async Task AddAsync(Patient patient)

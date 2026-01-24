@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PatientSyncHealth.Domain.Aggregates.Patient;
-using PatientSyncHealth.Domain.Enums;
-using PatientSyncHealth.Domain.ValueObjects;
 
 namespace PatientSyncHealth.Infrastructure.Configurations;
 
@@ -43,21 +41,22 @@ public class PatientConfiguration : IEntityTypeConfiguration<Patient>
             .HasConversion<string>()
             .HasMaxLength(20);
 
-        // Personal Identification Number - stored via backing fields
-        builder.Property<string>("_identificationNumberValue")
-            .HasColumnName("IdentificationNumber")
-            .IsRequired()
-            .HasMaxLength(13);
+        // Identification Number - EF Complex Type (storage only)
+        builder.ComplexProperty(p => p.IdentificationNumberData, idNumber =>
+        {
+            idNumber.Property(i => i.Value)
+                .HasColumnName("IdentificationNumber")
+                .IsRequired()
+                .HasMaxLength(13);
 
-        builder.Property<IdentificationNumberType>("_identificationNumberType")
-            .HasColumnName("IdentificationNumberType")
-            .IsRequired()
-            .HasConversion<string>()
-            .HasMaxLength(5);
+            idNumber.Property(i => i.Type)
+                .HasColumnName("IdentificationNumberType")
+                .IsRequired()
+                .HasConversion<string>()
+                .HasMaxLength(5);
+        });
 
-        builder.HasIndex("_identificationNumberValue").IsUnique();
-
-        // Ignore the computed property - EF uses the backing fields
+        // Ignore the domain value object (computed property)
         builder.Ignore(p => p.IdentificationNumber);
 
         // Email Value Object - owned type (optional)

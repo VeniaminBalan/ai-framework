@@ -14,7 +14,7 @@ namespace PatientSyncHealth.Domain.ValueObjects;
 /// NNN = Sequential number (001-999)
 /// C = Checksum digit
 /// </summary>
-public sealed class RomanianCnp : PersonalIdentificationNumber
+public sealed class RomanianCnp : IdentificationNumber
 {
     private static readonly int[] ChecksumWeights = [2, 7, 9, 1, 4, 6, 3, 5, 8, 2, 7, 9];
 
