@@ -1,6 +1,0 @@
-@PatientSyncHealth_HostAddress = http://localhost:5236
-
-GET {{PatientSyncHealth_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
